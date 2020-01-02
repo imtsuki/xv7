@@ -1,0 +1,22 @@
+name: Rust
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install latest nightly rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        override: true
+    - name: Install rust-src
+      run: rustup component add rust-src
+    - name: Install cargo-xbuild
+      run: cargo install cargo-xbuild
+    - name: Build
+      run: cargo xbuild --verbose
