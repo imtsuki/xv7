@@ -13,7 +13,7 @@ script = [
 '''
 mkdir -p target/esp/EFI/BOOT
 cp target/x86_64-unknown-uefi/debug/xv7-bootloader-uefi.efi target/esp/EFI/BOOT/BOOTX64.EFI
-qemu-system-x86_64 -drive if=pflash,format=raw,file=OVMF-pure-efi.fd,readonly=on -drive format=raw,file=fat:rw:target/esp
+qemu-system-x86_64 -drive if=pflash,format=raw,file=OVMF-pure-efi.fd,readonly=on -drive format=raw,file=fat:rw:target/esp -m 256M
 '''
 ]
 
