@@ -1,3 +1,24 @@
 [tasks.xbuild]
 command = "cargo"
 args = ["xbuild"]
+
+[tasks.member-xbuild]
+command = "cargo"
+args = ["make", "xbuild"]
+
+[tasks.qemu]
+workspace = false
+dependencies = ["member-xbuild"]
+script = [
+'''
+mkdir -p target/esp/EFI/BOOT
+cp target/x86_64-unknown-uefi/debug/xv7-bootloader-uefi.efi target/esp/EFI/BOOT/BOOTX64.EFI
+qemu-system-x86_64 -drive if=pflash,format=raw,file=OVMF-pure-efi.fd,readonly=on -drive format=raw,file=fat:rw:target/esp
+'''
+]
+
+[tasks.compose-image]
+workspace = false
+dependencies = ["member-xbuild"]
+script_runner = "@rust"
+script = { file = "compose.rs" }

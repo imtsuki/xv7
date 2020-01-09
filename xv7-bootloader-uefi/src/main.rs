@@ -5,9 +5,7 @@
 #[macro_use]
 extern crate log;
 
-use core::mem;
 use uefi::prelude::*;
-use uefi::table::boot::MemoryDescriptor;
 
 #[no_mangle]
 extern "C" fn __rust_probestack() {}
@@ -32,5 +30,5 @@ fn efi_main(_image: Handle, st: SystemTable<Boot>) -> Status {
     let map_size = bs.memory_map_size();
     info!("map_size: {}", map_size);
 
-    Status::SUCCESS
+    loop {}
 }

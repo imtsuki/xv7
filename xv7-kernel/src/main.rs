@@ -1,11 +1,8 @@
 #![no_std]
 #![no_main]
 #![feature(asm)]
-#![feature(global_asm)]
 
 use core::panic::PanicInfo;
-
-global_asm!(include_str!("boot.s"));
 
 macro_rules! hlt_loop {
     () => {
@@ -23,6 +20,6 @@ fn panic(_info: &PanicInfo) -> ! {
 }
 
 #[no_mangle]
-pub extern "C" fn bootloader_main() -> ! {
+pub extern "C" fn _start() -> ! {
     hlt_loop!();
 }
