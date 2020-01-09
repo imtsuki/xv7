@@ -15,6 +15,7 @@ extern "C" fn __rust_probestack() {}
 fn efi_main(_image: Handle, system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&system_table).expect_success("Failed to initialize utilities");
     let _ = system_table.stdout().clear().unwrap();
+
     info!("Hello, UEFI");
 
     let now = system_table.runtime_services().get_time().unwrap().unwrap();
