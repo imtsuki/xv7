@@ -1,0 +1,12 @@
+[package]
+name = "xv7-bootloader-uefi"
+version = "0.1.0"
+authors = ["imtsuki <me@qjx.app>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+uefi = "0.4.2"
+uefi-services = "0.2.0"
+log = { version = "0.4.8", default-features = false }

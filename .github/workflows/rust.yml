@@ -1,6 +1,6 @@
 name: Rust
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build:
@@ -16,7 +16,7 @@ jobs:
         override: true
     - name: Install rust-src
       run: rustup component add rust-src
-    - name: Install cargo-xbuild
-      run: cargo install cargo-xbuild
+    - name: Install cargo-make
+      run: cargo install cargo-make
     - name: Build
-      run: cargo xbuild --verbose
+      run: cargo make xbuild

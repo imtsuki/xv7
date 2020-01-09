@@ -184,7 +184,3 @@ dependencies = [
  "uefi",
  "uefi-services",
 ]
-
-[[package]]
-name = "xv7-kernel"
-version = "0.1.0"
