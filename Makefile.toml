@@ -1,8 +1,3 @@
 [tasks.xbuild]
 command = "cargo"
 args = ["xbuild"]
-
-[tasks.demo]
-workspace = false
-command = "cp"
-args = ["target/x86_64-unknown-uefi/debug/xv7-bootloader-uefi.efi", "./BootX64.efi"]
