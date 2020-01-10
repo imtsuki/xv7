@@ -4,8 +4,8 @@ use uefi::proto::media::file::*;
 use uefi::proto::media::fs::SimpleFileSystem;
 use uefi::Result;
 
-pub fn read_file(service: &BootServices, path: &str) -> Result<(usize, Vec<u8>)> {
-    let fatfs = service
+pub fn read_file(services: &BootServices, path: &str) -> Result<(usize, Vec<u8>)> {
+    let fatfs = services
         .locate_protocol::<SimpleFileSystem>()
         .log_warning()?;
     let fatfs = unsafe { &mut *fatfs.get() };
@@ -17,7 +17,7 @@ pub fn read_file(service: &BootServices, path: &str) -> Result<(usize, Vec<u8>)>
         .log_warning()?;
 
     let mut file = match file_handle.into_type().log_warning()? {
-        FileType::Regular(regular) => regular,
+        FileType::Regular(file) => file,
         FileType::Dir(_) => unreachable!(),
     };
 

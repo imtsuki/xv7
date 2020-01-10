@@ -5,7 +5,9 @@
 #![feature(box_patterns)]
 #![feature(box_syntax)]
 
+mod boot_info;
 mod io;
+mod mem;
 
 #[macro_use]
 extern crate alloc;
@@ -58,6 +60,8 @@ fn efi_main(_image: Handle, system_table: SystemTable<Boot>) -> Status {
     info!("Kernel image size = {}", len);
 
     deal_with_elf(data).expect("ELF processing failed");
+
+    mem::memory_map(boot_services).expect("memory failed");
 
     loop {
         x86_64::instructions::hlt();
