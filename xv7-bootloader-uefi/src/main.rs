@@ -60,9 +60,7 @@ fn efi_main(_image: Handle, system_table: SystemTable<Boot>) -> Status {
     deal_with_elf(data).expect("ELF processing failed");
 
     loop {
-        unsafe {
-            asm!("hlt");
-        }
+        x86_64::instructions::hlt();
     }
 }
 
