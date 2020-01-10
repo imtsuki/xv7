@@ -10,5 +10,6 @@ edition = "2018"
 uefi = "0.4.2"
 uefi-services = "0.2.0"
 x86_64 = "0.8.3"
+xmas-elf = "0.7.0"
 log = { version = "0.4.8", default-features = false }
 chrono = { version = "0.4.10", default-features = false }
