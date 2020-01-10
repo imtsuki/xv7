@@ -14,6 +14,7 @@ extern crate alloc;
 #[macro_use]
 extern crate log;
 
+use alloc::string::String;
 use alloc::vec::Vec;
 use chrono::prelude::*;
 use uefi::prelude::*;
@@ -61,11 +62,42 @@ fn efi_main(_image: Handle, system_table: SystemTable<Boot>) -> Status {
 
     deal_with_elf(data).expect("ELF processing failed");
 
-    mem::memory_map(boot_services).expect("memory failed");
+    mem::memory_map(boot_services).expect_success("memory failed");
+
+    for e in system_table.config_table() {
+        if e.guid == uefi::table::cfg::ACPI2_GUID {
+            let desc = unsafe { *(e.address as *const RSDPDescriptor20) };
+            info!("{:?}", desc);
+            info!(
+                "{:?} {:?}",
+                String::from_utf8(desc.first_part.signature.to_vec()),
+                String::from_utf8(desc.first_part.oem_id.to_vec()),
+            );
+        }
+    }
 
     loop {
         x86_64::instructions::hlt();
     }
+}
+#[derive(Clone, Copy, Debug)]
+#[repr(C, packed)]
+struct RSDPDescriptor {
+    signature: [u8; 8],
+    checksum: u8,
+    oem_id: [u8; 6],
+    revision: u8,
+    rsdt_address: u32,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C, packed)]
+struct RSDPDescriptor20 {
+    first_part: RSDPDescriptor,
+    length: u32,
+    xsdt_address: u64,
+    extended_checksum: u8,
+    reserved: [u8; 3],
 }
 
 fn deal_with_elf(raw: Vec<u8>) -> core::result::Result<(), &'static str> {
