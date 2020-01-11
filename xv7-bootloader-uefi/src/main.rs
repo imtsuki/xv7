@@ -1,7 +1,6 @@
 #![no_std]
 #![no_main]
 #![feature(abi_efiapi)]
-#![feature(asm)]
 #![feature(box_patterns)]
 #![feature(box_syntax)]
 
@@ -14,6 +13,7 @@ extern crate alloc;
 #[macro_use]
 extern crate log;
 
+use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::vec::Vec;
 use chrono::prelude::*;
@@ -60,7 +60,7 @@ fn efi_main(_image: Handle, system_table: SystemTable<Boot>) -> Status {
 
     info!("Kernel image size = {}", len);
 
-    deal_with_elf(data).expect("ELF processing failed");
+    let (begin, offset) = deal_with_elf(data).expect("ELF processing failed");
 
     mem::memory_map(boot_services).expect_success("memory failed");
 
@@ -76,10 +76,13 @@ fn efi_main(_image: Handle, system_table: SystemTable<Boot>) -> Status {
         }
     }
 
-    loop {
-        x86_64::instructions::hlt();
-    }
+    let kernel_entry_ptr = unsafe { begin.offset(offset as isize) as *const () };
+    let kernel_entry: extern "C" fn() = unsafe { core::mem::transmute(kernel_entry_ptr) };
+    kernel_entry();
+
+    unreachable!();
 }
+
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
 struct RSDPDescriptor {
@@ -100,9 +103,13 @@ struct RSDPDescriptor20 {
     reserved: [u8; 3],
 }
 
-fn deal_with_elf(raw: Vec<u8>) -> core::result::Result<(), &'static str> {
+fn deal_with_elf(raw: Vec<u8>) -> core::result::Result<(*const u8, u64), &'static str> {
     let elf = xmas_elf::ElfFile::new(&raw)?;
     info!("Kernel image info:");
     info!("{}", elf.header);
-    Ok(())
+    let offset = elf.header.pt2.entry_point();
+    info!("entry offset: 0x{:x}", offset);
+    let begin = Box::leak(raw.into_boxed_slice()).as_mut_ptr();
+    info!("{:p}", begin);
+    Ok((begin, offset))
 }

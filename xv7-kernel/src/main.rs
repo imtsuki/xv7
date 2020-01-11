@@ -2,24 +2,25 @@
 #![no_main]
 #![feature(asm)]
 
-use core::panic::PanicInfo;
+mod lang_item;
 
-macro_rules! hlt_loop {
-    () => {
-        loop {
-            unsafe {
-                asm!("hlt");
-            }
+fn hlt_loop() -> ! {
+    loop {
+        unsafe {
+            asm!("hlt");
         }
-    };
-}
-
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    hlt_loop!();
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    hlt_loop!();
+    let buffer = 0x80000000 as *mut u32;
+
+    for i in 0..(800 * 600) {
+        unsafe {
+            *buffer.offset(i) = 0xFFFFFFFF;
+        }
+    }
+
+    hlt_loop();
 }
