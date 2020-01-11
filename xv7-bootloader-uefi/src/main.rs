@@ -14,8 +14,6 @@ extern crate alloc;
 extern crate log;
 
 use alloc::boxed::Box;
-use alloc::string::String;
-use alloc::vec::Vec;
 use chrono::prelude::*;
 use uefi::prelude::*;
 
@@ -23,7 +21,7 @@ use uefi::prelude::*;
 extern "C" fn __rust_probestack() {}
 
 #[entry]
-fn efi_main(_image: Handle, system_table: SystemTable<Boot>) -> Status {
+fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&system_table).expect_success("Failed to initialize UEFI environment");
     let _ = system_table.stdout().clear().unwrap();
 
@@ -44,9 +42,6 @@ fn efi_main(_image: Handle, system_table: SystemTable<Boot>) -> Status {
         .set_watchdog_timer(0, 0x10000, None)
         .expect_success("Could not set watchdog timer");
 
-    let map_size = boot_services.memory_map_size();
-    info!("map_size: {}", map_size);
-
     use x86_64::registers::control::Cr3;
     let (page_table, _) = Cr3::read();
     info!(
@@ -54,62 +49,36 @@ fn efi_main(_image: Handle, system_table: SystemTable<Boot>) -> Status {
         page_table.start_address()
     );
 
-    info!(r"Load kernel image from \EFI\xv7\kernel");
-    let (len, data) = io::read_file(boot_services, r"\EFI\xv7\kernel")
+    info!(r"Loading kernel image from \EFI\xv7\kernel");
+    let (len, kernel_image) = io::read_file(boot_services, r"\EFI\xv7\kernel")
         .expect_success("Could not load kernel image");
 
     info!("Kernel image size = {}", len);
 
-    let (begin, offset) = deal_with_elf(data).expect("ELF processing failed");
+    let kernel_elf = xmas_elf::ElfFile::new(&kernel_image).expect("Error format of kernel image");
 
-    mem::memory_map(boot_services).expect_success("memory failed");
+    info!("Kernel image info:");
+    info!("{}", kernel_elf.header);
+    let entry_offset = kernel_elf.header.pt2.entry_point();
+    let base_address = Box::leak(kernel_image.into_boxed_slice()).as_mut_ptr();
 
-    for e in system_table.config_table() {
-        if e.guid == uefi::table::cfg::ACPI2_GUID {
-            let desc = unsafe { *(e.address as *const RSDPDescriptor20) };
-            info!("{:?}", desc);
-            info!(
-                "{:?} {:?}",
-                String::from_utf8(desc.first_part.signature.to_vec()),
-                String::from_utf8(desc.first_part.oem_id.to_vec()),
-            );
-        }
-    }
+    info!(
+        "Kernel entry point: {:p} + {:#x}",
+        base_address, entry_offset
+    );
 
-    let kernel_entry_ptr = unsafe { begin.offset(offset as isize) as *const () };
+    // Exit boot services and jump to the kernel.
+    info!("Jump to the kernel");
+    let mmap_size = boot_services.memory_map_size();
+    let mut mmap_buf = vec![0u8; mmap_size];
+    system_table
+        .exit_boot_services(image_handle, &mut mmap_buf)
+        .expect_success("UEFI exit boot services failed");
+
+    let kernel_entry_ptr = unsafe { base_address.offset(entry_offset as isize) as *const () };
     let kernel_entry: extern "C" fn() = unsafe { core::mem::transmute(kernel_entry_ptr) };
+
     kernel_entry();
 
     unreachable!();
-}
-
-#[derive(Clone, Copy, Debug)]
-#[repr(C, packed)]
-struct RSDPDescriptor {
-    signature: [u8; 8],
-    checksum: u8,
-    oem_id: [u8; 6],
-    revision: u8,
-    rsdt_address: u32,
-}
-
-#[derive(Clone, Copy, Debug)]
-#[repr(C, packed)]
-struct RSDPDescriptor20 {
-    first_part: RSDPDescriptor,
-    length: u32,
-    xsdt_address: u64,
-    extended_checksum: u8,
-    reserved: [u8; 3],
-}
-
-fn deal_with_elf(raw: Vec<u8>) -> core::result::Result<(*const u8, u64), &'static str> {
-    let elf = xmas_elf::ElfFile::new(&raw)?;
-    info!("Kernel image info:");
-    info!("{}", elf.header);
-    let offset = elf.header.pt2.entry_point();
-    info!("entry offset: 0x{:x}", offset);
-    let begin = Box::leak(raw.into_boxed_slice()).as_mut_ptr();
-    info!("{:p}", begin);
-    Ok((begin, offset))
 }
