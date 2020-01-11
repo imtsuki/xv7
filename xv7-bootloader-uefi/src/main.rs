@@ -75,7 +75,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
         .exit_boot_services(image_handle, &mut mmap_buf)
         .expect_success("UEFI exit boot services failed");
 
-    // No need to relocate our kernel because it is linked as an PIE executable.
+    // No need to relocate our kernel because it is linked as a PIE executable.
     let kernel_entry_ptr = unsafe { base_address.offset(entry_offset as isize) as *const () };
     let kernel_entry: extern "C" fn() = unsafe { core::mem::transmute(kernel_entry_ptr) };
 
