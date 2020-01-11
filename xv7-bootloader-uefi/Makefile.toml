@@ -1,0 +1,3 @@
+[tasks.xbuild]
+command = "cargo"
+args = ["xbuild"]
