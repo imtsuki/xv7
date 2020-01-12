@@ -1,9 +1,11 @@
+[env]
+CARGO_MAKE_WORKSPACE_SKIP_MEMBERS = "xv7-bootinfo"
+
 [tasks.xbuild]
 command = "cargo"
 args = ["xbuild"]
 
 [tasks.member-xbuild]
-env = { CARGO_MAKE_WORKSPACE_SKIP_MEMBERS = "xv7-bootinfo" }
 command = "cargo"
 args = ["make", "xbuild"]
 
