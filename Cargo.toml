@@ -2,6 +2,7 @@
 members = [
     "xv7-bootloader-uefi",
     "xv7-kernel",
+    "xv7-bootinfo",
 ]
 
 [profile.dev]

@@ -4,7 +4,6 @@
 #![feature(box_patterns)]
 #![feature(box_syntax)]
 
-mod boot_info;
 mod io;
 mod mem;
 
@@ -25,7 +24,17 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&system_table).expect_success("Failed to initialize UEFI environment");
     let _ = system_table.stdout().clear().unwrap();
 
-    info!("Hello, UEFI");
+    info!(
+        "{} v{}",
+        env!("CARGO_PKG_DESCRIPTION"),
+        env!("CARGO_PKG_VERSION")
+    );
+
+    info!("By {}", env!("CARGO_PKG_AUTHORS"));
+
+    info!("\nSystem Information:\n");
+
+    info!("Firmware Revision: {:#?}", system_table.firmware_revision());
 
     let now = system_table.runtime_services().get_time().unwrap().unwrap();
     let now = Utc
@@ -35,6 +44,14 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
 
     let now = now.with_timezone(&FixedOffset::east(8 * 3600));
     info!("TimeZone Asia/Shanghai: {}", now);
+
+    for e in system_table.config_table() {
+        if e.guid == uefi::table::cfg::SMBIOS_GUID {
+            let addr = e.address;
+            let smbios = unsafe { *(addr as *const bootinfo::SMBIOSEntryPoint) };
+            info!("{:#?}", smbios);
+        }
+    }
 
     let boot_services = system_table.boot_services();
 
@@ -63,12 +80,12 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     let base_address = Box::leak(kernel_image.into_boxed_slice()).as_mut_ptr();
 
     info!(
-        "Kernel entry point: {:p} + {:#x}",
+        "Kernel entry point found: {:p} + {:#x}",
         base_address, entry_offset
     );
 
     // Exit boot services and jump to the kernel.
-    info!("Jump to the kernel");
+    info!("Exiting UEFI boot services and jumping to the kernel");
     let mmap_size = boot_services.memory_map_size();
     let mut mmap_buf = vec![0u8; mmap_size];
     system_table

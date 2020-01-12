@@ -232,6 +232,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "xv7-bootinfo"
+version = "0.1.0"
+
+[[package]]
 name = "xv7-bootloader-uefi"
 version = "0.1.0"
 dependencies = [
@@ -241,6 +245,7 @@ dependencies = [
  "uefi-services",
  "x86_64 0.8.3",
  "xmas-elf",
+ "xv7-bootinfo",
 ]
 
 [[package]]
