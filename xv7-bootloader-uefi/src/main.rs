@@ -77,7 +77,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     info!("Kernel image info:");
     info!("{}", kernel_elf.header);
     let entry_offset = kernel_elf.header.pt2.entry_point();
-    let base_address = Box::leak(kernel_image.into_boxed_slice()).as_mut_ptr();
+    let base_address = Box::leak(kernel_image.into_boxed_slice()).as_ptr();
 
     info!(
         "Kernel entry point found: {:p} + {:#x}",
@@ -93,10 +93,9 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
         .expect_success("UEFI exit boot services failed");
 
     // No need to relocate our kernel because it is linked as a PIE executable.
-    let kernel_entry_ptr = unsafe { base_address.offset(entry_offset as isize) as *const () };
-    let kernel_entry: extern "C" fn() = unsafe { core::mem::transmute(kernel_entry_ptr) };
+    let kernel_entry_ptr =
+        unsafe { base_address.offset(entry_offset as isize) as *const core::ffi::c_void };
+    let kernel_entry: extern "C" fn() -> ! = unsafe { core::mem::transmute(kernel_entry_ptr) };
 
     kernel_entry();
-
-    unreachable!();
 }
