@@ -19,7 +19,7 @@ cp target/x86_64-unknown-uefi/debug/xv7-bootloader-uefi.efi target/esp/EFI/BOOT/
 mkdir -p target/esp/EFI/xv7
 cp target/x86_64-unknown-none/debug/xv7-kernel target/esp/EFI/xv7/kernel
 qemu-system-x86_64 \
-    -drive if=pflash,format=raw,file=qemu/OVMF-pure-efi.fd,readonly=on \
+    -drive if=pflash,format=raw,file=.qemu/OVMF-pure-efi.fd,readonly=on \
     -drive format=raw,file=fat:rw:target/esp \
     -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
     -serial stdio \
