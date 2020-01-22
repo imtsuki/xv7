@@ -15,56 +15,20 @@ extern crate log;
 use alloc::boxed::Box;
 use chrono::prelude::*;
 use uefi::prelude::*;
-
-#[no_mangle]
-extern "C" fn __rust_probestack() {}
+use x86_64::registers::control::Cr3;
 
 #[entry]
 fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&system_table).expect_success("Failed to initialize UEFI environment");
     let _ = system_table.stdout().clear().unwrap();
 
-    info!(
-        "{} v{}",
-        env!("CARGO_PKG_DESCRIPTION"),
-        env!("CARGO_PKG_VERSION")
-    );
-
-    info!("By {}", env!("CARGO_PKG_AUTHORS"));
-
-    info!("\nSystem Information:\n");
-
-    info!("Firmware Revision: {:#?}", system_table.firmware_revision());
-
-    let now = system_table.runtime_services().get_time().unwrap().unwrap();
-    let now = Utc
-        .ymd(now.year() as i32, now.month() as u32, now.day() as u32)
-        .and_hms(now.hour() as u32, now.minute() as u32, now.second() as u32);
-    info!("TimeZone Bupt/Jwxt: {}", now);
-
-    let now = now.with_timezone(&FixedOffset::east(8 * 3600));
-    info!("TimeZone Asia/Shanghai: {}", now);
-
-    for e in system_table.config_table() {
-        if e.guid == uefi::table::cfg::SMBIOS_GUID {
-            let addr = e.address;
-            let smbios = unsafe { *(addr as *const bootinfo::SMBIOSEntryPoint) };
-            info!("{:#?}", smbios);
-        }
-    }
+    print_system_information(&system_table).expect_success("Failed to print system information");
 
     let boot_services = system_table.boot_services();
 
     boot_services
         .set_watchdog_timer(0, 0x10000, None)
         .expect_success("Could not set watchdog timer");
-
-    use x86_64::registers::control::Cr3;
-    let (page_table, _) = Cr3::read();
-    info!(
-        "Current level 4 page table is located at: {:?}",
-        page_table.start_address()
-    );
 
     info!(r"Loading kernel image from \EFI\xv7\kernel");
     let (len, kernel_image) = io::read_file(boot_services, r"\EFI\xv7\kernel")
@@ -98,4 +62,54 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     let kernel_entry: extern "C" fn() -> ! = unsafe { core::mem::transmute(kernel_entry_ptr) };
 
     kernel_entry();
+}
+
+fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
+    info!(
+        "{} v{}",
+        env!("CARGO_PKG_DESCRIPTION"),
+        env!("CARGO_PKG_VERSION")
+    );
+    info!("By {}", env!("CARGO_PKG_AUTHORS"));
+
+    info!("\nSystem Information:\n");
+
+    info!("Firmware Revision: {:#?}", system_table.firmware_revision());
+
+    let now = system_table.runtime_services().get_time().log_warning()?;
+    let now = Utc
+        .ymd(now.year() as i32, now.month() as u32, now.day() as u32)
+        .and_hms(now.hour() as u32, now.minute() as u32, now.second() as u32);
+    info!("TimeZone Bupt/Jwxt: {}", now);
+
+    let now = now.with_timezone(&FixedOffset::east(8 * 3600));
+    info!("TimeZone Asia/Shanghai: {}", now);
+
+    for e in system_table.config_table() {
+        if e.guid == uefi::table::cfg::SMBIOS_GUID {
+            let addr = e.address;
+            let smbios = unsafe { *(addr as *const bootinfo::SMBIOSEntryPoint) };
+            info!("{:#?}", smbios);
+        }
+    }
+
+    let boot_services = system_table.boot_services();
+
+    let gop = boot_services
+        .locate_protocol::<uefi::proto::console::gop::GraphicsOutput>()
+        .expect_success("");
+
+    let gop = unsafe { &mut *gop.get() };
+
+    let mut buf = gop.frame_buffer();
+
+    info!("graphic buffer: {:p}, {:#x}", buf.as_mut_ptr(), buf.size());
+
+    let (page_table, _) = Cr3::read();
+    info!(
+        "Current level 4 page table is located at: {:?}",
+        page_table.start_address()
+    );
+
+    Ok(().into())
 }

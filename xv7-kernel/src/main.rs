@@ -4,6 +4,7 @@
 
 mod lang_item;
 
+#[inline(always)]
 fn hlt_loop() -> ! {
     loop {
         unsafe {
