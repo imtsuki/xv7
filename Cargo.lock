@@ -50,6 +50,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "goblin"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0259546d6aed5dd1f4efc3ae663cae62912ceb927c0e96ae1fc8a22ab1516763"
+dependencies = [
+ "log",
+ "plain",
+ "scroll",
+]
+
+[[package]]
 name = "log"
 version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -76,6 +87,12 @@ checksum = "d4c81ffc11c212fa327657cb19dd85eb7419e163b5b076bede2bdb5c974c07e4"
 dependencies = [
  "autocfg",
 ]
+
+[[package]]
+name = "plain"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
 name = "proc-macro2"
@@ -108,6 +125,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
 dependencies = [
  "semver",
+]
+
+[[package]]
+name = "scroll"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "abb2332cb595d33f7edd5700f4cbf94892e680c7f0ae56adab58a35190b66cb1"
+dependencies = [
+ "scroll_derive",
+]
+
+[[package]]
+name = "scroll_derive"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8584eea9b9ff42825b46faf46a8c24d2cff13ec152fa2a50df788b87c07ee28"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -198,15 +235,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xmas-elf"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e74de9a366f6ab8c405fa6b371d9ac24943921fa14b3d64afcb202065c405f11"
-dependencies = [
- "zero",
-]
-
-[[package]]
 name = "xv7-bootinfo"
 version = "0.1.0"
 
@@ -215,12 +243,13 @@ name = "xv7-bootloader-uefi"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "goblin",
  "log",
  "uefi",
  "uefi-services",
  "x86_64",
- "xmas-elf",
  "xv7-bootinfo",
+ "zeroize",
 ]
 
 [[package]]
@@ -228,7 +257,7 @@ name = "xv7-kernel"
 version = "0.1.0"
 
 [[package]]
-name = "zero"
-version = "0.1.2"
+name = "zeroize"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f1bc8a6b2005884962297587045002d8cfb8dcec9db332f4ca216ddc5de82c5"
+checksum = "3cbac2ed2ba24cc90f5e06485ac8c7c1e5449fe8911aef4d8877218af021a5b8"

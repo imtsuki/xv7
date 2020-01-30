@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![feature(abi_efiapi)]
+#![feature(asm)]
 #![feature(box_patterns)]
 #![feature(box_syntax)]
 
@@ -12,10 +13,29 @@ extern crate alloc;
 #[macro_use]
 extern crate log;
 
-use alloc::boxed::Box;
+/*
+#[cfg(target_pointer_width = "64")]
+use goblin::elf64 as elf;
+
+#[cfg(target_pointer_width = "32")]
+use goblin::elf32 as elf;
+*/
+
 use chrono::prelude::*;
+use goblin::elf;
 use uefi::prelude::*;
 use x86_64::registers::control::Cr3;
+use zeroize::Zeroize;
+
+const KERNEL_IMAGE_PATH: &'static str = r"\EFI\xv7\kernel";
+
+#[allow(unused)]
+const VIRTUAL_OFFSET: usize = 0xFFFF800000000000;
+
+const KERNEL_PHYSICAL_BASE: usize = 0x100000;
+
+#[allow(unused)]
+const STACK_PHYSICAL: usize = 0x80000;
 
 #[entry]
 fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
@@ -30,22 +50,52 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
         .set_watchdog_timer(0, 0x10000, None)
         .expect_success("Could not set watchdog timer");
 
-    info!(r"Loading kernel image from \EFI\xv7\kernel");
-    let (len, kernel_image) = io::read_file(boot_services, r"\EFI\xv7\kernel")
+    info!(r"Loading kernel image from {}", KERNEL_IMAGE_PATH);
+    let (len, kernel_image) = io::read_file(boot_services, KERNEL_IMAGE_PATH)
         .expect_success("Could not load kernel image");
 
     info!("Kernel image size = {}", len);
 
-    let kernel_elf = xmas_elf::ElfFile::new(&kernel_image).expect("Error format of kernel image");
-
-    info!("Kernel image info:");
-    info!("{}", kernel_elf.header);
-    let entry_offset = kernel_elf.header.pt2.entry_point();
-    let base_address = Box::leak(kernel_image.into_boxed_slice()).as_ptr();
+    let kernel_elf = elf::Elf::parse(&kernel_image).expect("Failed to parse ELF file");
 
     info!(
-        "Kernel entry point found: {:p} + {:#x}",
-        base_address, entry_offset
+        "Now loading kernel to KERNEL_PHYSICAL_BASE = {:#x}",
+        KERNEL_PHYSICAL_BASE
+    );
+
+    for ph in kernel_elf.program_headers {
+        if ph.p_type == elf::program_header::PT_LOAD {
+            info!(
+                "PT_LOAD range = {:#x?}, to address {:#x} + {:#x?}",
+                ph.file_range(),
+                KERNEL_PHYSICAL_BASE,
+                ph.vm_range()
+            );
+
+            let dst = unsafe {
+                core::slice::from_raw_parts_mut(
+                    (ph.p_vaddr as usize + KERNEL_PHYSICAL_BASE) as *mut u8,
+                    ph.vm_range().len(),
+                )
+            };
+
+            dst.zeroize();
+
+            unsafe {
+                core::ptr::copy(
+                    kernel_image.as_ptr().offset(ph.p_offset as isize),
+                    dst.as_mut_ptr(),
+                    ph.vm_range().len(),
+                );
+            }
+        }
+    }
+
+    let entry_offset = kernel_elf.entry as usize;
+
+    info!(
+        "Kernel entry point: {:#x} + {:#x}",
+        KERNEL_PHYSICAL_BASE, entry_offset
     );
 
     // Exit boot services and jump to the kernel.
@@ -57,8 +107,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
         .expect_success("UEFI exit boot services failed");
 
     // No need to relocate our kernel because it is linked as a PIE executable.
-    let kernel_entry_ptr =
-        unsafe { base_address.offset(entry_offset as isize) as *const core::ffi::c_void };
+    let kernel_entry_ptr = (KERNEL_PHYSICAL_BASE + entry_offset) as *const core::ffi::c_void;
     let kernel_entry: extern "C" fn() -> ! = unsafe { core::mem::transmute(kernel_entry_ptr) };
 
     kernel_entry();
@@ -74,7 +123,11 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
 
     info!("\nSystem Information:\n");
 
-    info!("Firmware Revision: {:#?}", system_table.firmware_revision());
+    info!(
+        "UEFI Firmware {} {:#?}",
+        system_table.firmware_vendor(),
+        system_table.firmware_revision()
+    );
 
     let now = system_table.runtime_services().get_time().log_warning()?;
     let now = Utc
@@ -89,7 +142,7 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
         if e.guid == uefi::table::cfg::SMBIOS_GUID {
             let addr = e.address;
             let smbios = unsafe { *(addr as *const bootinfo::SMBIOSEntryPoint) };
-            info!("{:#?}", smbios);
+            info!("{:?}", smbios);
         }
     }
 
@@ -103,7 +156,7 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
 
     let mut buf = gop.frame_buffer();
 
-    info!("graphic buffer: {:p}, {:#x}", buf.as_mut_ptr(), buf.size());
+    info!("Graphic buffer: {:p}, {:#x}", buf.as_mut_ptr(), buf.size());
 
     let (page_table, _) = Cr3::read();
     info!(

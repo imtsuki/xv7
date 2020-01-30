@@ -8,10 +8,11 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uefi = "0.4.3"
+uefi = { version = "0.4.3", features = ["exts"] }
 uefi-services = "0.2.1"
 x86_64 = "0.8.3"
-xmas-elf = "0.7.0"
+zeroize = "1.1.0"
+goblin = { version = "0.2.0", default-features = false, features = ["elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive", "endian_fd"] }
 log = { version = "0.4.8", default-features = false }
 chrono = { version = "0.4.10", default-features = false }
 bootinfo = { path = "../xv7-bootinfo", package = "xv7-bootinfo" }
