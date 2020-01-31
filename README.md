@@ -10,7 +10,7 @@ Install cargo-make:
 cargo install cargo-make
 ```
 
-And, you should have the latest version of [QEMU](https://www.qemu.org) installed.
+Also, you should have the latest version of [QEMU](https://www.qemu.org) installed.
 
 ## Build and Run
 
