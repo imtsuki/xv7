@@ -4,14 +4,17 @@
 
 mod lang_item;
 
+#[macro_use]
+extern crate embedded_graphics;
+
+use embedded_graphics::image::ImageBmp;
 use embedded_graphics::{
     drawable::Pixel,
-    egtext,
     fonts::Font8x16,
     geometry::Size,
     pixelcolor::{Rgb888, RgbColor},
     prelude::*,
-    text_style, DrawTarget,
+    DrawTarget,
 };
 
 struct GopDisplay {}
@@ -57,6 +60,15 @@ pub extern "C" fn _start() -> ! {
         style = text_style!(font = Font8x16, text_color = Rgb888::BLACK)
     )
     .draw(&mut display);
+
+    let image: ImageBmp<Rgb888> = ImageBmp::new(include_bytes!("./img.bmp")).unwrap();
+
+    let width = image.width() as i32;
+    let height = image.height() as i32;
+
+    image
+        .translate((400 - width / 2, 300 - height / 2).into())
+        .draw(&mut display);
 
     hlt_loop();
 }
