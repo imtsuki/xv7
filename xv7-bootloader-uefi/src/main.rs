@@ -34,8 +34,11 @@ const VIRTUAL_OFFSET: usize = 0xFFFF800000000000;
 
 const KERNEL_PHYSICAL_BASE: usize = 0x100000;
 
-#[allow(unused)]
 const STACK_PHYSICAL: usize = 0x80000;
+
+const STACK_SIZE: usize = 0x10000;
+
+static mut KERNEL_ENTRY: usize = 0;
 
 #[entry]
 fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
@@ -107,9 +110,18 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
         .expect_success("UEFI exit boot services failed");
 
     // No need to relocate our kernel because it is linked as a PIE executable.
-    let kernel_entry_ptr = (KERNEL_PHYSICAL_BASE + entry_offset) as *const core::ffi::c_void;
-    let kernel_entry: extern "C" fn() -> ! = unsafe { core::mem::transmute(kernel_entry_ptr) };
+    unsafe {
+        KERNEL_ENTRY = KERNEL_PHYSICAL_BASE + entry_offset;
+        // FIXME: stack pointer and size are arbitrary
+        asm!("mov $0, %rsp" : : "r"(STACK_PHYSICAL + STACK_SIZE) : "memory" : "volatile");
+        // NOTICE: after we changed rsp, all local variables are no longer avaliable
+        // and we must call another function immediately
+        call_kernel_entry();
+    }
+}
 
+unsafe fn call_kernel_entry() -> ! {
+    let kernel_entry: extern "C" fn() -> ! = core::mem::transmute(KERNEL_ENTRY);
     kernel_entry();
 }
 
