@@ -24,8 +24,8 @@ use goblin::elf32 as elf;
 use chrono::prelude::*;
 use goblin::elf;
 use uefi::prelude::*;
-use x86_64::registers::control::Cr3;
-use x86_64::structures::paging::{PageTable, PageTableFlags};
+use x86_64::registers::control::{Cr3, Cr3Flags};
+use x86_64::structures::paging::{PageTable, PageTableFlags, PhysFrame};
 use x86_64::PhysAddr;
 use zeroize::Zeroize;
 
@@ -35,9 +35,11 @@ const KERNEL_IMAGE_PATH: &'static str = r"\EFI\xv7\kernel";
 const VIRTUAL_OFFSET: usize = 0xFFFF_8000_0000_0000;
 
 /// Base address to load kernel.
+const KERNEL_VIRTUAL_BASE: usize = KERNEL_PHYSICAL_BASE + VIRTUAL_OFFSET;
 const KERNEL_PHYSICAL_BASE: usize = 0x10_0000;
 
 /// Temporary kernel stack.
+const STACK_VIRTUAL: usize = STACK_PHYSICAL + VIRTUAL_OFFSET;
 const STACK_PHYSICAL: usize = 0x8_0000;
 
 // FIXME: stack pointer and size are arbitrary
@@ -106,12 +108,8 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
 
     info!(
         "Kernel entry point: {:#x} + {:#x}",
-        KERNEL_PHYSICAL_BASE, entry_offset
+        KERNEL_VIRTUAL_BASE, entry_offset
     );
-
-    unsafe {
-        paging();
-    }
 
     // Exit boot services and jump to the kernel.
     info!("Exiting UEFI boot services and jumping to the kernel");
@@ -121,10 +119,14 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
         .exit_boot_services(image_handle, &mut mmap_buf)
         .expect_success("UEFI exit boot services failed");
 
+    unsafe {
+        paging();
+    }
+
     // No need to relocate our kernel because it is linked as a PIE executable.
     unsafe {
-        KERNEL_ENTRY = KERNEL_PHYSICAL_BASE + entry_offset;
-        asm!("mov $0, %rsp" : : "r"(STACK_PHYSICAL + STACK_SIZE) : "memory" : "volatile");
+        KERNEL_ENTRY = KERNEL_VIRTUAL_BASE + entry_offset;
+        asm!("mov $0, %rsp" : : "r"(STACK_VIRTUAL + STACK_SIZE) : "memory" : "volatile");
         // NOTICE: after we changed rsp, all local variables are no longer avaliable
         // and we must call another function immediately
         call_kernel_entry();
@@ -137,9 +139,7 @@ unsafe fn call_kernel_entry() -> ! {
 }
 
 /// Create a temporary page table for kernel's early booting process.
-/// First 4GiB memory is mapped to higher half address space.
-///
-/// TODO: Switch CR3
+/// First 4GiB memory is mapped to both lower and higher half address space.
 ///
 /// FIXME: This page table is considered flawed but should be enough.
 /// Switch to `x86_64::structures::paging::Mapper` for better readability.
@@ -150,7 +150,11 @@ unsafe fn paging() {
     let l4_table = &mut *(base as *mut PageTable);
     l4_table.zero();
 
-    // Map to L3 table
+    // Map to L3 table, both lower-half and higher-half
+    l4_table[0b000_000_000].set_addr(
+        PhysAddr::new(base + 0x1000),
+        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+    );
     l4_table[0b100_000_000].set_addr(
         PhysAddr::new(base + 0x1000),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
@@ -188,6 +192,11 @@ unsafe fn paging() {
             );
         }
     }
+
+    Cr3::write(
+        PhysFrame::containing_address(PhysAddr::new(L4_PAGE_TABLE as u64)),
+        Cr3Flags::empty(),
+    );
 }
 
 fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
@@ -235,10 +244,11 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
 
     info!("Graphic buffer: {:p}, {:#x}", buf.as_mut_ptr(), buf.size());
 
-    let (page_table, _) = Cr3::read();
+    let (page_table, flags) = Cr3::read();
     info!(
-        "Current level 4 page table is located at: {:?}",
-        page_table.start_address()
+        "Current level 4 page table is located at: {:?} with flags {:?}",
+        page_table.start_address(),
+        flags
     );
 
     Ok(().into())
