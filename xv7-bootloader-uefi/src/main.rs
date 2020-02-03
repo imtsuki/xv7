@@ -5,7 +5,9 @@
 #![feature(box_patterns)]
 #![feature(box_syntax)]
 
+mod config;
 mod io;
+mod loader;
 mod mem;
 mod paging;
 
@@ -15,25 +17,9 @@ extern crate alloc;
 extern crate log;
 
 use chrono::prelude::*;
-use goblin::elf;
 use uefi::prelude::*;
-use x86_64::registers::control::Cr3;
-use zeroize::Zeroize;
 
-const KERNEL_IMAGE_PATH: &'static str = r"\EFI\xv7\kernel";
-
-const VIRTUAL_OFFSET: usize = 0xFFFF_8000_0000_0000;
-
-/// Base address to load kernel.
-const KERNEL_VIRTUAL_BASE: usize = KERNEL_PHYSICAL_BASE + VIRTUAL_OFFSET;
-const KERNEL_PHYSICAL_BASE: usize = 0x10_0000;
-
-/// Temporary kernel stack.
-const STACK_VIRTUAL: usize = STACK_PHYSICAL + VIRTUAL_OFFSET;
-const STACK_PHYSICAL: usize = 0x8_0000;
-
-// FIXME: stack pointer and size are arbitrary
-const STACK_SIZE: usize = 0x1_0000;
+use config::*;
 
 static mut KERNEL_ENTRY: usize = 0x0;
 
@@ -42,56 +28,16 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     uefi_services::init(&system_table).expect_success("Failed to initialize UEFI environment");
     let _ = system_table.stdout().clear().unwrap();
 
-    print_system_information(&system_table).expect_success("Failed to print system information");
-
     let boot_services = system_table.boot_services();
 
     boot_services
         .set_watchdog_timer(0, 0x10000, None)
         .expect_success("Could not set watchdog timer");
 
-    info!(r"Loading kernel image from {}", KERNEL_IMAGE_PATH);
-    let (len, kernel_image) = io::read_file(boot_services, KERNEL_IMAGE_PATH)
-        .expect_success("Could not load kernel image");
+    print_system_information(&system_table).expect_success("Failed to print system information");
 
-    info!("Kernel image size = {}", len);
-
-    let kernel_elf = elf::Elf::parse(&kernel_image).expect("Failed to parse ELF file");
-
-    info!(
-        "Now loading kernel to KERNEL_PHYSICAL_BASE = {:#x}",
-        KERNEL_PHYSICAL_BASE
-    );
-
-    for ph in kernel_elf.program_headers {
-        if ph.p_type == elf::program_header::PT_LOAD {
-            info!(
-                "PT_LOAD range = {:#x?}, to address {:#x} + {:#x?}",
-                ph.file_range(),
-                KERNEL_PHYSICAL_BASE,
-                ph.vm_range()
-            );
-
-            let dst = unsafe {
-                core::slice::from_raw_parts_mut(
-                    (ph.p_vaddr as usize + KERNEL_PHYSICAL_BASE) as *mut u8,
-                    ph.vm_range().len(),
-                )
-            };
-
-            dst.zeroize();
-
-            unsafe {
-                core::ptr::copy(
-                    kernel_image.as_ptr().offset(ph.p_offset as isize),
-                    dst.as_mut_ptr(),
-                    ph.vm_range().len(),
-                );
-            }
-        }
-    }
-
-    let entry_offset = kernel_elf.entry as usize;
+    // load kernel ELF image.
+    let entry_offset = loader::load_elf(boot_services, KERNEL_IMAGE_PATH);
 
     info!(
         "Kernel entry point: {:#x} + {:#x}",
@@ -120,6 +66,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     }
 }
 
+/// This function runs on new kernel stack.
 unsafe fn call_kernel_entry() -> ! {
     let kernel_entry: extern "C" fn() -> ! = core::mem::transmute(KERNEL_ENTRY);
     kernel_entry();
@@ -169,13 +116,6 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
     let mut buf = gop.frame_buffer();
 
     info!("Graphic buffer: {:p}, {:#x}", buf.as_mut_ptr(), buf.size());
-
-    let (page_table, flags) = Cr3::read();
-    info!(
-        "Current level 4 page table is located at: {:?} with flags {:?}",
-        page_table.start_address(),
-        flags
-    );
 
     Ok(().into())
 }

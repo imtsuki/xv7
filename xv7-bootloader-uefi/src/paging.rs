@@ -1,8 +1,7 @@
-use x86_64::registers::control::{Cr3, Cr3Flags};
+use crate::config::L4_PAGE_TABLE;
+use x86_64::registers::control::{Cr3, Cr3Flags, Cr4, Cr4Flags};
 use x86_64::structures::paging::{PageTable, PageTableFlags, PhysFrame};
 use x86_64::PhysAddr;
-/// Temporary page table used for kernel booting.
-const L4_PAGE_TABLE: usize = 0x7_0000;
 
 /// Create a temporary page table for kernel's early booting process.
 /// First 4GiB memory is mapped to both lower and higher half address space.
@@ -16,7 +15,7 @@ pub unsafe fn paging() {
     let l4_table = &mut *(base as *mut PageTable);
     l4_table.zero();
 
-    // Map to L3 table, both lower-half and higher-half
+    // Map to L3 table, to both lower-half and higher-half
     l4_table[0b000_000_000].set_addr(
         PhysAddr::new(base + 0x1000),
         PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
@@ -41,7 +40,7 @@ pub unsafe fn paging() {
 
     base += 0x1000;
 
-    // Map 4 GiB address to higher-half.
+    // Map 0..4GiB to higher-half.
     // L2 tables are: 0x72000, 0x73000, 0x74000, 0x75000.
     for i in 0..4 {
         let l2_table_addr = base + 0x1000 + 0x1000 * i as u64;
@@ -58,6 +57,16 @@ pub unsafe fn paging() {
             );
         }
     }
+
+    let mut cr4 = Cr4::read();
+
+    cr4 |= Cr4Flags::PAGE_SIZE_EXTENSION
+        | Cr4Flags::PHYSICAL_ADDRESS_EXTENSION
+        | Cr4Flags::PAGE_GLOBAL
+        | Cr4Flags::OSFXSR
+        | Cr4Flags::OSXSAVE;
+
+    Cr4::write(cr4);
 
     Cr3::write(
         PhysFrame::containing_address(PhysAddr::new(L4_PAGE_TABLE as u64)),
