@@ -1,6 +1,7 @@
-use crate::config::KERNEL_PHYSICAL_BASE;
+use crate::config::*;
 use crate::io::read_file;
 use goblin::elf;
+use goblin::elf::reloc::*;
 use uefi::prelude::*;
 use zeroize::Zeroize;
 
@@ -19,6 +20,11 @@ pub fn load_elf(services: &BootServices, path: &str) -> usize {
         "Now loading kernel to KERNEL_PHYSICAL_BASE = {:#x}",
         KERNEL_PHYSICAL_BASE
     );
+
+    // info!("dynrelas {:?}", kernel_elf.dynrelas);
+    // info!("dynrels {:?}", kernel_elf.dynrels);
+    // info!("pltrelocs {:?}", kernel_elf.pltrelocs);
+    // info!("shdr_relocs {:?}", kernel_elf.shdr_relocs);
 
     for ph in kernel_elf.program_headers {
         if ph.p_type == elf::program_header::PT_LOAD {
@@ -47,6 +53,22 @@ pub fn load_elf(services: &BootServices, path: &str) -> usize {
             }
         }
     }
+
+    // Relocate our kernel as it is linked as a PIE executable.
+    for reloc in kernel_elf.dynrelas.iter() {
+        match reloc.r_type {
+            R_X86_64_RELATIVE => {
+                let addr = (KERNEL_PHYSICAL_BASE + reloc.r_offset as usize) as *mut u64;
+                unsafe {
+                    *addr = KERNEL_VIRTUAL_BASE as u64 + reloc.r_addend.unwrap() as u64;
+                }
+            }
+            _ => panic!("Unhandled reloc type!"),
+        }
+    }
+
+    assert_eq!(kernel_elf.dynrels.len(), 0);
+    assert_eq!(kernel_elf.pltrelocs.len(), 0);
 
     kernel_elf.entry as usize
 }

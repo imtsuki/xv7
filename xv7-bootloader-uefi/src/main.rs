@@ -56,7 +56,6 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
         paging::paging();
     }
 
-    // No need to relocate our kernel because it is linked as a PIE executable.
     unsafe {
         KERNEL_ENTRY = KERNEL_VIRTUAL_BASE + entry_offset;
         asm!("mov $0, %rsp" : : "r"(STACK_VIRTUAL + STACK_SIZE) : "memory" : "volatile");
