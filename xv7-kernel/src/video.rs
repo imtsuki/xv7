@@ -1,7 +1,7 @@
 use embedded_graphics::pixelcolor::Rgb888;
 use embedded_graphics::prelude::*;
 
-pub struct GopDisplay {}
+pub struct GopDisplay;
 
 impl DrawTarget<Rgb888> for GopDisplay {
     #[inline(always)]

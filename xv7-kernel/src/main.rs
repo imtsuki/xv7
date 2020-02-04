@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(asm)]
 
+mod console;
 mod lang_item;
 mod video;
 
@@ -21,7 +22,11 @@ fn hlt_loop() -> ! {
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    let mut display = video::GopDisplay {};
+    // `\x1B[2J` clears the screen, and `\x1B[H` moves the cursor to the home position.
+    print!("\x1B[2J\x1B[H");
+    println!("Now we are in kernel!");
+
+    let mut display = video::GopDisplay;
 
     display.clear(RgbColor::WHITE);
 
