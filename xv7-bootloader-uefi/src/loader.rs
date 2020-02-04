@@ -21,11 +21,6 @@ pub fn load_elf(services: &BootServices, path: &str) -> usize {
         KERNEL_PHYSICAL_BASE
     );
 
-    // info!("dynrelas {:?}", kernel_elf.dynrelas);
-    // info!("dynrels {:?}", kernel_elf.dynrels);
-    // info!("pltrelocs {:?}", kernel_elf.pltrelocs);
-    // info!("shdr_relocs {:?}", kernel_elf.shdr_relocs);
-
     for ph in kernel_elf.program_headers {
         if ph.p_type == elf::program_header::PT_LOAD {
             info!(
@@ -54,7 +49,7 @@ pub fn load_elf(services: &BootServices, path: &str) -> usize {
         }
     }
 
-    // Relocate our kernel as it is linked as a PIE executable.
+    // Relocate our kernel because it is linked as a PIE executable.
     for reloc in kernel_elf.dynrelas.iter() {
         match reloc.r_type {
             R_X86_64_RELATIVE => {
