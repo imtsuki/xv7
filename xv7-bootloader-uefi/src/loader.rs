@@ -42,7 +42,7 @@ pub fn load_elf(services: &BootServices, path: &str) -> usize {
                 core::ptr::copy(
                     kernel_image.as_ptr().offset(ph.p_offset as isize),
                     dst.as_mut_ptr(),
-                    ph.vm_range().len(),
+                    ph.file_range().len(),
                 );
             }
         }
