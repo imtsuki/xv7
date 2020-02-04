@@ -16,27 +16,27 @@ pub trait Console {
     fn read(&mut self, buf: &mut [u8]) -> usize;
 }
 
-pub struct ConsoleGroup {
+pub struct ConsoleDrivers {
     serial: SerialConsole,
 }
 
-lazy_static! {
-    pub static ref CONSOLE_GROUP: Mutex<ConsoleGroup> = Mutex::new(ConsoleGroup::new());
-}
-
-impl ConsoleGroup {
+impl ConsoleDrivers {
     pub fn new() -> Self {
-        ConsoleGroup {
+        Self {
             serial: SerialConsole::new(),
         }
     }
 }
 
-impl fmt::Write for ConsoleGroup {
+impl fmt::Write for ConsoleDrivers {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.serial.write(s.as_bytes());
         Ok(())
     }
+}
+
+lazy_static! {
+    pub static ref CONSOLE_DRIVERS: Mutex<ConsoleDrivers> = Mutex::new(ConsoleDrivers::new());
 }
 
 #[macro_export]
@@ -52,5 +52,5 @@ macro_rules! println {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    CONSOLE_GROUP.lock().write_fmt(args).unwrap();
+    CONSOLE_DRIVERS.lock().write_fmt(args).unwrap();
 }

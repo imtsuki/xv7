@@ -1,15 +1,16 @@
 #![no_std]
 #![no_main]
+#![feature(abi_x86_interrupt)]
 #![feature(asm)]
 
 mod console;
+mod gdt;
+mod interrupts;
 mod lang_item;
 mod video;
 
 #[macro_use]
 extern crate embedded_graphics;
-
-use embedded_graphics::{fonts::Font8x16, image::ImageBmp, pixelcolor::Rgb888, prelude::*};
 
 #[inline(always)]
 fn hlt_loop() -> ! {
@@ -22,10 +23,27 @@ fn hlt_loop() -> ! {
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    // Disable interrupts for safety.
+    interrupts::disable();
+
     // `\x1B[2J` clears the screen, and `\x1B[H` moves the cursor to the home position.
     print!("\x1B[2J\x1B[H");
     println!("Now we are in kernel!");
 
+    gdt::init();
+    interrupts::init();
+
+    fun_things();
+
+    // All work is done.
+    interrupts::enable();
+
+    hlt_loop();
+}
+
+use embedded_graphics::{fonts::Font8x16, image::ImageBmp, pixelcolor::Rgb888, prelude::*};
+
+fn fun_things() {
     let mut display = video::GopDisplay;
 
     display.clear(RgbColor::WHITE);
@@ -47,6 +65,4 @@ pub extern "C" fn _start() -> ! {
         style = text_style!(font = Font8x16, text_color = RgbColor::BLACK)
     )
     .draw(&mut display);
-
-    hlt_loop();
 }

@@ -5,7 +5,7 @@ pub struct SerialConsole(SerialPort);
 
 impl SerialConsole {
     pub fn new() -> Self {
-        SerialConsole({
+        Self({
             let mut serial_port = unsafe { SerialPort::new(0x3F8) };
             serial_port.init();
             serial_port

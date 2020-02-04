@@ -366,6 +366,7 @@ dependencies = [
  "spin",
  "uart_16550",
  "vte",
+ "x86_64",
 ]
 
 [[package]]
