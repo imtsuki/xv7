@@ -24,19 +24,20 @@ fn hlt_loop() -> ! {
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     // Disable interrupts for safety.
-    interrupts::disable();
+    interrupts::without_interrupts(|| {
+        // `\x1B[2J` clears the screen, and `\x1B[H` moves the cursor to the home position.
+        print!("\x1B[2J\x1B[H");
+        println!("Now we are in kernel!");
 
-    // `\x1B[2J` clears the screen, and `\x1B[H` moves the cursor to the home position.
-    print!("\x1B[2J\x1B[H");
-    println!("Now we are in kernel!");
+        println!("IA32_APIC_BASE: {:#x}", unsafe {
+            x86_64::registers::model_specific::Msr::new(0x1b).read()
+        });
 
-    gdt::init();
-    interrupts::init();
+        gdt::init();
+        interrupts::init();
 
-    fun_things();
-
-    // All work is done.
-    interrupts::enable();
+        fun_things();
+    });
 
     hlt_loop();
 }

@@ -23,7 +23,7 @@ pub struct ConsoleDrivers {
 impl ConsoleDrivers {
     pub fn new() -> Self {
         Self {
-            serial: SerialConsole::new(),
+            serial: SerialConsole::new(serial::COM1),
         }
     }
 }
@@ -52,5 +52,7 @@ macro_rules! println {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    CONSOLE_DRIVERS.lock().write_fmt(args).unwrap();
+    crate::interrupts::without_interrupts(|| {
+        CONSOLE_DRIVERS.lock().write_fmt(args).unwrap();
+    });
 }
