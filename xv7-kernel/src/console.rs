@@ -52,7 +52,7 @@ macro_rules! println {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    crate::interrupts::without_interrupts(|| {
+    crate::interrupt::without_interrupts(|| {
         CONSOLE_DRIVERS.lock().write_fmt(args).unwrap();
     });
 }

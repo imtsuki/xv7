@@ -5,7 +5,7 @@
 
 mod console;
 mod gdt;
-mod interrupts;
+mod interrupt;
 mod lang_item;
 mod video;
 
@@ -13,7 +13,7 @@ mod video;
 extern crate embedded_graphics;
 
 #[inline(always)]
-fn hlt_loop() -> ! {
+fn halt_loop() -> ! {
     loop {
         unsafe {
             asm!("hlt");
@@ -21,10 +21,9 @@ fn hlt_loop() -> ! {
     }
 }
 
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+pub fn main() -> ! {
     // Disable interrupts for safety.
-    interrupts::without_interrupts(|| {
+    interrupt::without_interrupts(|| {
         // `\x1B[2J` clears the screen, and `\x1B[H` moves the cursor to the home position.
         print!("\x1B[2J\x1B[H");
         println!("Now we are in kernel!");
@@ -34,12 +33,12 @@ pub extern "C" fn _start() -> ! {
         });
 
         gdt::init();
-        interrupts::init();
+        interrupt::init();
 
         fun_things();
     });
 
-    hlt_loop();
+    halt_loop();
 }
 
 use embedded_graphics::{fonts::Font8x16, image::ImageBmp, pixelcolor::Rgb888, prelude::*};
