@@ -28,7 +28,7 @@ pub fn kmain(args: &'static KernelArgs) -> ! {
         print!("\x1B[2J\x1B[H");
         println!("Now we are in kernel!");
 
-        println!("KernelArgs: {:#p}", args);
+        println!("KernelArgs: {:#x?}", args);
 
         println!("IA32_APIC_BASE: {:#x}", unsafe {
             x86_64::registers::model_specific::Msr::new(0x1b).read()

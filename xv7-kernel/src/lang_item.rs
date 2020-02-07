@@ -1,6 +1,5 @@
 use crate::halt_loop;
-use bootinfo::KernelArgs;
-use bootinfo::KERNEL_ARGS_MAGIC;
+use bootinfo::{KernelArgs, KernelEntryFn, KERNEL_ARGS_MAGIC};
 use core::panic::PanicInfo;
 
 #[panic_handler]
@@ -17,3 +16,7 @@ extern "sysv64" fn _start(args: &'static KernelArgs) -> ! {
     );
     crate::kmain(args);
 }
+
+#[doc(hidden)]
+#[allow(unused)]
+const KERNEL_ENTRY_SIGNATURE_TYPE_CHECK: KernelEntryFn = _start;

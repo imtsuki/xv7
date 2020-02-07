@@ -1,5 +1,7 @@
 #![no_std]
 
+pub type KernelEntryFn = extern "sysv64" fn(args: &'static KernelArgs) -> !;
+
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
 pub struct KernelArgs {

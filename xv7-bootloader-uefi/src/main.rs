@@ -21,7 +21,7 @@ use uefi::prelude::*;
 
 use config::*;
 
-use bootinfo::{KernelArgs, KERNEL_ARGS_MAGIC};
+use bootinfo::{KernelArgs, KernelEntryFn, KERNEL_ARGS_MAGIC};
 
 static mut KERNEL_ENTRY: usize = 0x0;
 
@@ -70,8 +70,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
 /// This function runs on new kernel stack.
 unsafe fn call_kernel_entry() -> ! {
     use core::mem;
-    let kernel_entry: extern "sysv64" fn(bootinfo: *const KernelArgs) -> ! =
-        mem::transmute(KERNEL_ENTRY);
+    let kernel_entry: KernelEntryFn = mem::transmute(KERNEL_ENTRY);
     let args = &mut *(KERNEL_ARGS_VIRTUAL_BASE as *mut KernelArgs);
     args.magic = KERNEL_ARGS_MAGIC;
     kernel_entry(args);
