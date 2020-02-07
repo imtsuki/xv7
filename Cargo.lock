@@ -367,6 +367,7 @@ dependencies = [
  "uart_16550",
  "vte",
  "x86_64",
+ "xv7-bootinfo",
 ]
 
 [[package]]

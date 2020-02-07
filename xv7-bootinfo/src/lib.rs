@@ -2,7 +2,11 @@
 
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
-pub struct BootInfo {}
+pub struct KernelArgs {
+    pub magic: u64,
+}
+
+pub const KERNEL_ARGS_MAGIC: u64 = 0xcafe_beef_dead_babe;
 
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]

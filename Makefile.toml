@@ -18,6 +18,7 @@ mkdir -p target/esp/EFI/BOOT
 cp target/x86_64-unknown-uefi/debug/xv7-bootloader-uefi.efi target/esp/EFI/BOOT/BOOTX64.EFI
 mkdir -p target/esp/EFI/xv7
 cp target/x86_64-unknown-none/debug/xv7-kernel target/esp/EFI/xv7/kernel
+objdump -d target/esp/EFI/xv7/kernel > target/esp/EFI/xv7/kernel.asm
 qemu-system-x86_64 \
     -drive if=pflash,format=raw,file=.qemu/OVMF-pure-efi.fd,readonly=on \
     -drive format=raw,file=fat:rw:target/esp \

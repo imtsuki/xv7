@@ -2,7 +2,9 @@
 pub const KERNEL_IMAGE_PATH: &'static str = r"\EFI\xv7\kernel";
 
 /// Higher half address sapce offset.
-pub const VIRTUAL_OFFSET: usize = 0xFFFF_8000_0000_0000;
+pub const VIRTUAL_OFFSET: usize = PAGE_OFFSET_BASE;
+
+pub const PAGE_OFFSET_BASE: usize = 0xFFFF_8000_0000_0000;
 
 /// Base address where kernel is loaded.
 pub const KERNEL_VIRTUAL_BASE: usize = KERNEL_PHYSICAL_BASE + VIRTUAL_OFFSET;
@@ -17,3 +19,7 @@ pub const STACK_SIZE: usize = 0x1_0000;
 
 /// Temporary page table used for kernel booting.
 pub const L4_PAGE_TABLE: usize = 0x7_0000;
+
+/// Where KernelArgs is placed
+pub const KERNEL_ARGS_VIRTUAL_BASE: usize = KERNEL_ARGS_PHYSICAL_BASE + VIRTUAL_OFFSET;
+pub const KERNEL_ARGS_PHYSICAL_BASE: usize = 0x6_0000;

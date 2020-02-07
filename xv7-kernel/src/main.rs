@@ -21,12 +21,14 @@ fn halt_loop() -> ! {
     }
 }
 
-pub fn main() -> ! {
+pub fn kmain(args: &'static KernelArgs) -> ! {
     // Disable interrupts for safety.
     interrupt::without_interrupts(|| {
         // `\x1B[2J` clears the screen, and `\x1B[H` moves the cursor to the home position.
         print!("\x1B[2J\x1B[H");
         println!("Now we are in kernel!");
+
+        println!("KernelArgs: {:#p}", args);
 
         println!("IA32_APIC_BASE: {:#x}", unsafe {
             x86_64::registers::model_specific::Msr::new(0x1b).read()
@@ -41,6 +43,7 @@ pub fn main() -> ! {
     halt_loop();
 }
 
+use bootinfo::KernelArgs;
 use embedded_graphics::{fonts::Font8x16, image::ImageBmp, pixelcolor::Rgb888, prelude::*};
 
 fn fun_things() {
