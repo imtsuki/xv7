@@ -1,5 +1,7 @@
 # xv7
 
+You can view the development notes on [the Telegram Channel](https://t.me/xv7notes).
+
 Please use [Thanos.sh](https://github.com/hotvulcan/Thanos.sh) to decide which course to take (OS or Compiler).
 
 ## Prerequisites
