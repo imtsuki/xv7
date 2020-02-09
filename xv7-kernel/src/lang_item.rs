@@ -9,7 +9,7 @@ fn panic(info: &PanicInfo) -> ! {
 }
 
 #[no_mangle]
-extern "sysv64" fn _start(args: &'static KernelArgs) -> ! {
+extern "sysv64" fn _start(args: &KernelArgs) -> ! {
     assert_eq!(
         args.magic, KERNEL_ARGS_MAGIC,
         "KernelArgs magic number check failed"

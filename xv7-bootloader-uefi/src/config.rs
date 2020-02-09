@@ -20,6 +20,7 @@ pub const STACK_SIZE: usize = 0x1_0000;
 /// Temporary page table used for kernel booting.
 pub const L4_PAGE_TABLE: usize = 0x7_0000;
 
-/// Where KernelArgs is placed
-pub const KERNEL_ARGS_VIRTUAL_BASE: usize = KERNEL_ARGS_PHYSICAL_BASE + VIRTUAL_OFFSET;
-pub const KERNEL_ARGS_PHYSICAL_BASE: usize = 0x6_0000;
+/// Where MemoryMaps is placed
+#[allow(unused)]
+pub const MEMORY_MAPS_VIRTUAL_BASE: usize = MEMORY_MAPS_PHYSICAL_BASE + VIRTUAL_OFFSET;
+pub const MEMORY_MAPS_PHYSICAL_BASE: usize = 0x6_0000;

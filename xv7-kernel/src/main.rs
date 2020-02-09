@@ -3,25 +3,22 @@
 #![feature(abi_x86_interrupt)]
 #![feature(asm)]
 
+#[macro_use]
+mod macros;
+#[macro_use]
+extern crate embedded_graphics;
+
+mod config;
 mod console;
 mod gdt;
 mod interrupt;
 mod lang_item;
+mod memory;
 mod video;
 
-#[macro_use]
-extern crate embedded_graphics;
+use bootinfo::KernelArgs;
 
-#[inline(always)]
-fn halt_loop() -> ! {
-    loop {
-        unsafe {
-            asm!("hlt");
-        }
-    }
-}
-
-pub fn kmain(args: &'static KernelArgs) -> ! {
+pub fn kmain(args: &KernelArgs) -> ! {
     // Disable interrupts for safety.
     interrupt::without_interrupts(|| {
         // `\x1B[2J` clears the screen, and `\x1B[H` moves the cursor to the home position.
@@ -37,13 +34,23 @@ pub fn kmain(args: &'static KernelArgs) -> ! {
         gdt::init();
         interrupt::init();
 
+        memory::FRAME_ALLOCATOR.lock().hello();
+
         fun_things();
     });
 
     halt_loop();
 }
 
-use bootinfo::KernelArgs;
+#[inline(always)]
+fn halt_loop() -> ! {
+    loop {
+        unsafe {
+            asm!("hlt");
+        }
+    }
+}
+
 use embedded_graphics::{fonts::Font8x16, image::ImageBmp, pixelcolor::Rgb888, prelude::*};
 
 fn fun_things() {

@@ -1,14 +1,34 @@
 #![no_std]
 
-pub type KernelEntryFn = extern "sysv64" fn(args: &'static KernelArgs) -> !;
+pub use x86_64::PhysAddr;
+
+pub type KernelEntryFn = extern "sysv64" fn(args: &KernelArgs) -> !;
 
 #[derive(Clone, Copy, Debug)]
 #[repr(C)]
 pub struct KernelArgs {
     pub magic: u64,
+    // pub memory_map: &'static [MemoryDescriptor],
 }
 
 pub const KERNEL_ARGS_MAGIC: u64 = 0xcafe_beef_dead_babe;
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct MemoryDescriptor {
+    pub memory_type: MemoryType,
+    pub base: PhysAddr,
+    pub page_count: u64,
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub enum MemoryType {
+    Usable,
+    Acpi,
+    UefiRuntime,
+    Reserved,
+}
 
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]

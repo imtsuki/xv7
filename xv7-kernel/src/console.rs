@@ -1,5 +1,4 @@
 use core::fmt;
-use core::fmt::Write;
 use lazy_static::lazy_static;
 use spin::Mutex;
 
@@ -37,22 +36,4 @@ impl fmt::Write for ConsoleDrivers {
 
 lazy_static! {
     pub static ref CONSOLE_DRIVERS: Mutex<ConsoleDrivers> = Mutex::new(ConsoleDrivers::new());
-}
-
-#[macro_export]
-macro_rules! print {
-    ($($arg:tt)*) => ($crate::console::_print(format_args!($($arg)*)));
-}
-
-#[macro_export]
-macro_rules! println {
-    () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
-}
-
-#[doc(hidden)]
-pub fn _print(args: fmt::Arguments) {
-    crate::interrupt::without_interrupts(|| {
-        CONSOLE_DRIVERS.lock().write_fmt(args).unwrap();
-    });
 }

@@ -71,9 +71,10 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
 unsafe fn call_kernel_entry() -> ! {
     use core::mem;
     let kernel_entry: KernelEntryFn = mem::transmute(KERNEL_ENTRY);
-    let args = &mut *(KERNEL_ARGS_VIRTUAL_BASE as *mut KernelArgs);
-    args.magic = KERNEL_ARGS_MAGIC;
-    kernel_entry(args);
+    let args = KernelArgs {
+        magic: KERNEL_ARGS_MAGIC,
+    };
+    kernel_entry(&args);
 }
 
 fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {

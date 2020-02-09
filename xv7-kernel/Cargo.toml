@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 embedded-graphics = { version = "0.6.0-alpha.3", features = ["bmp"] }
+bitvec = { version = "0.17.2", default-features = false, features = ["atomic"] }
 vte = "0.6.0"
 spin = "0.5.2"
 uart_16550 = "0.2.2"
