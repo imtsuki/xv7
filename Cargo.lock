@@ -362,7 +362,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "xv7-bootinfo"
+name = "xv7-boot"
 version = "0.1.0"
 dependencies = [
  "x86_64",
@@ -378,7 +378,7 @@ dependencies = [
  "uefi",
  "uefi-services",
  "x86_64",
- "xv7-bootinfo",
+ "xv7-boot",
  "zeroize",
 ]
 
@@ -393,7 +393,7 @@ dependencies = [
  "uart_16550",
  "vte",
  "x86_64",
- "xv7-bootinfo",
+ "xv7-boot",
 ]
 
 [[package]]

@@ -15,4 +15,4 @@ zeroize = "1.1.0"
 goblin = { version = "0.2.0", default-features = false, features = ["elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive", "endian_fd"] }
 log = { version = "0.4.8", default-features = false }
 chrono = { version = "0.4.10", default-features = false }
-bootinfo = { path = "../xv7-bootinfo", package = "xv7-bootinfo" }
+boot = { path = "../xv7-boot", package = "xv7-boot" }

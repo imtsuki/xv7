@@ -16,6 +16,11 @@ impl<'map> BitmapFrameAllocator<'map> {
         }
     }
 
+    #[allow(unused)]
+    pub fn init(&mut self) {
+        todo!();
+    }
+
     pub fn hello(&mut self) {
         println!(
             "BitmapFrameAllocator: pages count: {}, bitmap occupies {}KiB",
@@ -31,19 +36,19 @@ impl<'map> BitmapFrameAllocator<'map> {
 
 unsafe impl<'map> FrameAllocator<Size4KiB> for BitmapFrameAllocator<'map> {
     fn allocate_frame(&mut self) -> Option<UnusedPhysFrame<Size4KiB>> {
-        unimplemented!()
+        todo!()
     }
 }
 
 impl<'map> FrameDeallocator<Size4KiB> for BitmapFrameAllocator<'map> {
     fn deallocate_frame(&mut self, _frame: UnusedPhysFrame<Size4KiB>) {
-        unimplemented!()
+        todo!()
     }
 }
 
 lazy_static! {
     pub static ref FRAME_ALLOCATOR: Mutex<BitmapFrameAllocator<'static>> = {
-        static mut MAP: [u8; MAX_PAGES_SUPPORTED / 8] = [0; MAX_PAGES_SUPPORTED / 8];
+        static mut MAP: [u8; MAX_PAGES_SUPPORTED / 8] = [1; MAX_PAGES_SUPPORTED / 8];
         Mutex::new(BitmapFrameAllocator::new(unsafe { &mut MAP }))
     };
 }

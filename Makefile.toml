@@ -1,5 +1,5 @@
 [env]
-CARGO_MAKE_WORKSPACE_SKIP_MEMBERS = "xv7-bootinfo"
+CARGO_MAKE_WORKSPACE_SKIP_MEMBERS = "xv7-boot"
 
 [tasks.xbuild]
 command = "cargo"

@@ -9,7 +9,9 @@ macro_rules! print {
 #[macro_export]
 macro_rules! println {
     () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+    ($($arg:tt)*) => ({
+        $crate::print!("{}\n", format_args!($($arg)*));
+    })
 }
 
 #[doc(hidden)]
@@ -20,4 +22,28 @@ pub fn _print(args: fmt::Arguments) {
             .write_fmt(args)
             .unwrap();
     });
+}
+
+/// Prints and returns the value of a given expression for quick and dirty
+/// debugging.
+///
+/// Copied from standard library with slight modifications.
+#[macro_export]
+macro_rules! dbg {
+    () => {
+        $crate::println!("[{}:{}]", file!(), line!());
+    };
+    ($val:expr) => {
+        match $val {
+            tmp => {
+                $crate::println!("[{}:{}] {} = {:#x?}",
+                    file!(), line!(), stringify!($val), &tmp);
+                tmp
+            }
+        }
+    };
+    ($val:expr,) => { $crate::dbg!($val) };
+    ($($val:expr),+ $(,)?) => {
+        ($($crate::dbg!($val)),+,)
+    };
 }

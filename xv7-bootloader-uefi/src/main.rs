@@ -5,25 +5,30 @@
 #![feature(box_patterns)]
 #![feature(box_syntax)]
 
+#[macro_use]
+extern crate alloc;
+#[macro_use]
+extern crate log;
+#[macro_use]
+mod macros;
+
 mod config;
 mod io;
 mod loader;
 mod mem;
 mod paging;
 
-#[macro_use]
-extern crate alloc;
-#[macro_use]
-extern crate log;
-
 use chrono::prelude::*;
 use uefi::prelude::*;
 
 use config::*;
 
-use bootinfo::{KernelArgs, KernelEntryFn, KERNEL_ARGS_MAGIC};
+use boot::{FrameBuffer, KernelArgs, KernelEntryFn, KERNEL_ARGS_MAGIC};
+use x86_64::PhysAddr;
 
 static mut KERNEL_ENTRY: usize = 0x0;
+static mut FRAME_BUFFER_BASE: usize = 0x0;
+static mut FRAME_BUFFER_LEN: usize = 0x0;
 
 #[entry]
 fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
@@ -39,12 +44,10 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     print_system_information(&system_table).expect_success("Failed to print system information");
 
     // load kernel ELF image.
-    let entry_offset = loader::load_elf(boot_services, KERNEL_IMAGE_PATH);
+    let (kernel_entry, kernel_memory_descriptor) =
+        loader::load_elf(boot_services, dbg!(KERNEL_IMAGE_PATH));
 
-    info!(
-        "Kernel entry point: {:#x} + {:#x}",
-        KERNEL_VIRTUAL_BASE, entry_offset
-    );
+    dbg!(kernel_entry, kernel_memory_descriptor);
 
     // Exit boot services and jump to the kernel.
     info!("Exiting UEFI boot services and jumping to the kernel");
@@ -59,7 +62,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     }
 
     unsafe {
-        KERNEL_ENTRY = KERNEL_VIRTUAL_BASE + entry_offset;
+        KERNEL_ENTRY = kernel_entry.into();
         asm!("mov $0, %rsp" : : "r"(STACK_VIRTUAL + STACK_SIZE) : "memory" : "volatile");
         // NOTICE: after we changed rsp, all local variables are no longer avaliable
         // and we must call another function immediately
@@ -73,6 +76,10 @@ unsafe fn call_kernel_entry() -> ! {
     let kernel_entry: KernelEntryFn = mem::transmute(KERNEL_ENTRY);
     let args = KernelArgs {
         magic: KERNEL_ARGS_MAGIC,
+        frame_buffer: FrameBuffer {
+            base: PhysAddr::new(FRAME_BUFFER_BASE as u64),
+            len: FRAME_BUFFER_LEN,
+        },
     };
     kernel_entry(&args);
 }
@@ -84,8 +91,6 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
         env!("CARGO_PKG_VERSION")
     );
     info!("By {}", env!("CARGO_PKG_AUTHORS"));
-
-    info!("\nSystem Information:\n");
 
     info!(
         "UEFI Firmware {} {:#?}",
@@ -105,8 +110,8 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
     for e in system_table.config_table() {
         if e.guid == uefi::table::cfg::SMBIOS_GUID {
             let addr = e.address;
-            let smbios = unsafe { *(addr as *const bootinfo::SMBIOSEntryPoint) };
-            info!("{:?}", smbios);
+            let smbios = unsafe { *(addr as *const boot::SMBIOSEntryPoint) };
+            debug!("{:?}", smbios);
         }
     }
 
@@ -121,6 +126,11 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
     let mut buf = gop.frame_buffer();
 
     info!("Graphic buffer: {:p}, {:#x}", buf.as_mut_ptr(), buf.size());
+
+    unsafe {
+        FRAME_BUFFER_BASE = buf.as_mut_ptr() as usize;
+        FRAME_BUFFER_LEN = buf.size();
+    }
 
     Ok(().into())
 }

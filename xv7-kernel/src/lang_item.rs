@@ -1,5 +1,5 @@
 use crate::halt_loop;
-use bootinfo::{KernelArgs, KernelEntryFn, KERNEL_ARGS_MAGIC};
+use boot::{KernelArgs, KernelEntryFn, KERNEL_ARGS_MAGIC};
 use core::panic::PanicInfo;
 
 #[panic_handler]

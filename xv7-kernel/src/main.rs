@@ -16,20 +16,20 @@ mod lang_item;
 mod memory;
 mod video;
 
-use bootinfo::KernelArgs;
+use boot::KernelArgs;
 
 pub fn kmain(args: &KernelArgs) -> ! {
     // Disable interrupts for safety.
     interrupt::without_interrupts(|| {
-        // `\x1B[2J` clears the screen, and `\x1B[H` moves the cursor to the home position.
-        print!("\x1B[2J\x1B[H");
+        // `\x1B[2J` clears the screen,
+        // `\x1B[H` moves the cursor to the home position, and
+        // `\x1B[0m` resets all color.
+        print!("{}{}{}", "\x1B[2J", "\x1B[H", "\x1B[0m");
         println!("Now we are in kernel!");
 
-        println!("KernelArgs: {:#x?}", args);
+        dbg!(args);
 
-        println!("IA32_APIC_BASE: {:#x}", unsafe {
-            x86_64::registers::model_specific::Msr::new(0x1b).read()
-        });
+        dbg!(unsafe { x86_64::registers::model_specific::Msr::new(0x1b).read() });
 
         gdt::init();
         interrupt::init();
