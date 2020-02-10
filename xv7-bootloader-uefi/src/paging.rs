@@ -9,7 +9,7 @@ use x86_64::PhysAddr;
 /// FIXME: This page table is considered flawed but should be enough.
 /// Switch to `x86_64::structures::paging::Mapper` for better readability.
 pub unsafe fn paging() {
-    let mut base = L4_PAGE_TABLE as u64;
+    let mut base = L4_PAGE_TABLE;
 
     // L4 table is located at 0x70000
     let l4_table = &mut *(base as *mut PageTable);
@@ -69,7 +69,7 @@ pub unsafe fn paging() {
     Cr4::write(cr4);
 
     Cr3::write(
-        PhysFrame::containing_address(PhysAddr::new(L4_PAGE_TABLE as u64)),
+        PhysFrame::containing_address(PhysAddr::new(L4_PAGE_TABLE)),
         Cr3Flags::empty(),
     );
 }

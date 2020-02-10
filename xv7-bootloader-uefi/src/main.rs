@@ -23,11 +23,12 @@ use uefi::prelude::*;
 
 use config::*;
 
-use boot::{FrameBuffer, KernelArgs, KernelEntryFn, KERNEL_ARGS_MAGIC};
-use x86_64::PhysAddr;
+use boot::KERNEL_ARGS_MAGIC;
+use boot::{FrameBufferDescriptor, KernelArgs, KernelEntry, KernelEntryFn};
+use x86_64::{PhysAddr, VirtAddr};
 
-static mut KERNEL_ENTRY: usize = 0x0;
-static mut FRAME_BUFFER_BASE: usize = 0x0;
+static mut KERNEL_ENTRY: KernelEntry = KernelEntry(VirtAddr::new_unchecked(0x0));
+static mut FRAME_BUFFER_BASE: u64 = 0x0;
 static mut FRAME_BUFFER_LEN: usize = 0x0;
 
 #[entry]
@@ -62,8 +63,8 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     }
 
     unsafe {
-        KERNEL_ENTRY = kernel_entry.into();
-        asm!("mov $0, %rsp" : : "r"(STACK_VIRTUAL + STACK_SIZE) : "memory" : "volatile");
+        KERNEL_ENTRY = kernel_entry;
+        asm!("mov $0, %rsp" : : "r"(STACK_VIRTUAL + STACK_SIZE as u64) : "memory" : "volatile");
         // NOTICE: after we changed rsp, all local variables are no longer avaliable
         // and we must call another function immediately
         call_kernel_entry();
@@ -76,8 +77,8 @@ unsafe fn call_kernel_entry() -> ! {
     let kernel_entry: KernelEntryFn = mem::transmute(KERNEL_ENTRY);
     let args = KernelArgs {
         magic: KERNEL_ARGS_MAGIC,
-        frame_buffer: FrameBuffer {
-            base: PhysAddr::new(FRAME_BUFFER_BASE as u64),
+        frame_buffer: FrameBufferDescriptor {
+            base: PhysAddr::new(FRAME_BUFFER_BASE),
             len: FRAME_BUFFER_LEN,
         },
     };
@@ -128,7 +129,7 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
     info!("Graphic buffer: {:p}, {:#x}", buf.as_mut_ptr(), buf.size());
 
     unsafe {
-        FRAME_BUFFER_BASE = buf.as_mut_ptr() as usize;
+        FRAME_BUFFER_BASE = buf.as_mut_ptr() as u64;
         FRAME_BUFFER_LEN = buf.size();
     }
 

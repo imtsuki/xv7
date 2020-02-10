@@ -3,10 +3,21 @@
 #![no_std]
 #![deny(missing_docs)]
 
-pub use x86_64::PhysAddr;
+pub use x86_64::{PhysAddr, VirtAddr};
 
 /// Function signature for kernel entry point.
 pub type KernelEntryFn = extern "sysv64" fn(args: &KernelArgs) -> !;
+
+/// Kernel entry's virtual address.
+#[derive(Clone, Copy, Debug)]
+#[repr(transparent)]
+pub struct KernelEntry(pub VirtAddr);
+
+impl Into<VirtAddr> for KernelEntry {
+    fn into(self) -> VirtAddr {
+        self.0
+    }
+}
 
 /// Bootloader passes `KernelArgs` to the kernel entry,
 /// containing some boot information.
@@ -16,17 +27,8 @@ pub struct KernelArgs {
     /// Magic number for checking whether `KernelArgs` is passed correctly
     pub magic: u64,
     /// Video frame buffer
-    pub frame_buffer: FrameBuffer, // pub memory_map: &'static [MemoryDescriptor],
-}
-
-/// Describe video frame buffer.
-#[derive(Clone, Copy, Debug)]
-#[repr(C)]
-pub struct FrameBuffer {
-    /// Base address
-    pub base: PhysAddr,
-    /// buffer length
-    pub len: usize,
+    pub frame_buffer: FrameBufferDescriptor,
+    /* pub memory_map: &'static [MemoryDescriptor], */
 }
 
 /// `KernelArgs` magic value.
@@ -58,6 +60,16 @@ pub enum PhysMemoryType {
     UefiRuntime,
     /// Reserved
     Reserved,
+}
+
+/// Describe video frame buffer.
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct FrameBufferDescriptor {
+    /// Base address
+    pub base: PhysAddr,
+    /// buffer length
+    pub len: usize,
 }
 
 #[allow(missing_docs)]

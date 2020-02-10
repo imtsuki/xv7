@@ -48,7 +48,7 @@ impl<'map> FrameDeallocator<Size4KiB> for BitmapFrameAllocator<'map> {
 
 lazy_static! {
     pub static ref FRAME_ALLOCATOR: Mutex<BitmapFrameAllocator<'static>> = {
-        static mut MAP: [u8; MAX_PAGES_SUPPORTED / 8] = [1; MAX_PAGES_SUPPORTED / 8];
+        static mut MAP: [u8; MAX_FRAMES_SUPPORTED / 8] = [0; MAX_FRAMES_SUPPORTED / 8];
         Mutex::new(BitmapFrameAllocator::new(unsafe { &mut MAP }))
     };
 }
