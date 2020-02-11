@@ -2,12 +2,14 @@
 #![no_main]
 #![feature(abi_x86_interrupt)]
 #![feature(asm)]
+#![allow(unused_attributes)]
 
 #[macro_use]
 mod macros;
 #[macro_use]
 extern crate embedded_graphics;
 
+mod ansi;
 mod config;
 mod console;
 mod gdt;
@@ -18,13 +20,18 @@ mod video;
 
 use boot::KernelArgs;
 
+use ansi::CtrlSeq;
+use ansi::EraseParam;
+
 pub fn kmain(args: &KernelArgs) -> ! {
     // Disable interrupts for safety.
     interrupt::without_interrupts(|| {
-        // `\x1B[2J` clears the screen,
-        // `\x1B[H` moves the cursor to the home position, and
-        // `\x1B[0m` resets all color.
-        print!("{}{}{}", "\x1B[2J", "\x1B[H", "\x1B[0m");
+        print!(
+            "{}{}{}",
+            CtrlSeq::EraseInDisplay(Some(EraseParam::Entire)),
+            CtrlSeq::CursorPosition(None, None),
+            CtrlSeq::SelectGraphicRendition(None),
+        );
         println!("Now we are in kernel!");
 
         dbg!(args);

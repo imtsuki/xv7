@@ -19,6 +19,12 @@ impl Into<VirtAddr> for KernelEntry {
     }
 }
 
+impl From<VirtAddr> for KernelEntry {
+    fn from(addr: VirtAddr) -> Self {
+        Self(addr)
+    }
+}
+
 /// Bootloader passes `KernelArgs` to the kernel entry,
 /// containing some boot information.
 #[derive(Clone, Copy, Debug)]
@@ -75,7 +81,7 @@ pub struct FrameBufferDescriptor {
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
-pub struct RSDPDescriptor {
+pub struct RsdpDescriptor {
     signature: [u8; 8],
     checksum: u8,
     oem_id: [u8; 6],
@@ -86,8 +92,8 @@ pub struct RSDPDescriptor {
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
-pub struct RSDPDescriptor20 {
-    first_part: RSDPDescriptor,
+pub struct RsdpDescriptor20 {
+    first_part: RsdpDescriptor,
     length: u32,
     xsdt_address: u64,
     extended_checksum: u8,
@@ -97,7 +103,7 @@ pub struct RSDPDescriptor20 {
 #[allow(missing_docs)]
 #[derive(Clone, Copy, Debug)]
 #[repr(C, packed)]
-pub struct SMBIOSEntryPoint {
+pub struct SmbiosEntryPoint {
     /// This is `_SM_`
     entry_point_string: [u8; 4],
     /// This value summed with all the values of the table, should be 0 (overflow)

@@ -14,7 +14,7 @@ pub const KERNEL_PHYSICAL_BASE: u64 = 0x10_0000;
 pub const STACK_VIRTUAL: u64 = STACK_PHYSICAL + VIRTUAL_OFFSET;
 pub const STACK_PHYSICAL: u64 = 0x8_0000;
 
-// FIXME: stack pointer and size are arbitrary
+/// FIXME: stack pointer and size are arbitrary
 pub const STACK_SIZE: usize = 0x1_0000;
 
 /// Temporary page table used for kernel booting.

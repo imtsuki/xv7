@@ -4,6 +4,7 @@
 #![feature(asm)]
 #![feature(box_patterns)]
 #![feature(box_syntax)]
+#![allow(unused_attributes)]
 
 #[macro_use]
 extern crate alloc;
@@ -111,7 +112,7 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
     for e in system_table.config_table() {
         if e.guid == uefi::table::cfg::SMBIOS_GUID {
             let addr = e.address;
-            let smbios = unsafe { *(addr as *const boot::SMBIOSEntryPoint) };
+            let smbios = unsafe { *(addr as *const boot::SmbiosEntryPoint) };
             debug!("{:?}", smbios);
         }
     }
