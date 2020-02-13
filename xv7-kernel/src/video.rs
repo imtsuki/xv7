@@ -11,7 +11,7 @@ impl DrawTarget<Rgb888> for GopDisplay {
 
         unsafe {
             core::ptr::write_volatile(
-                (0xffff_8000_8000_0000 as *mut u32).offset(index as isize),
+                (0xffff_8000_8000_0000 as *mut u32).add(index as usize),
                 ((color.r() as u32) << 16) | ((color.g() as u32) << 8) | (color.b() as u32),
             );
         }

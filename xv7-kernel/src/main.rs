@@ -28,7 +28,7 @@ pub fn kmain(args: &KernelArgs) -> ! {
     interrupt::without_interrupts(|| {
         print!(
             "{}{}{}",
-            CtrlSeq::EraseInDisplay(Some(EraseParam::Entire)),
+            CtrlSeq::EraseDisplay(Some(EraseParam::Entire)),
             CtrlSeq::CursorPosition(None, None),
             CtrlSeq::SelectGraphicRendition(None),
         );

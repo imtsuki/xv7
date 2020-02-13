@@ -110,12 +110,12 @@ pub enum CtrlSeq {
     /// with space characters
     ///
     /// Code: [ED](ED), Char: `J`
-    EraseInDisplay(Option<EraseParam>),
+    EraseDisplay(Option<EraseParam>),
     /// Replace all text on the line with the cursor specified by `EraseParam`
     /// with space characters
     ///
     /// Code: [EL](EL), Char: `K`
-    EraseInLine(Option<EraseParam>),
+    EraseLine(Option<EraseParam>),
     /* End of Text Modification */
     /* Text Formatting */
     /// Set the format of the screen and text as specified by n
@@ -218,10 +218,10 @@ impl fmt::Display for CtrlSeq {
             InsertLine(None) => write!(f, "{}", IL),
             DeleteLine(Some(n)) => write!(f, "{}{}", n, DL),
             DeleteLine(None) => write!(f, "{}", DL),
-            EraseInDisplay(Some(n)) => write!(f, "{}{}", n, ED),
-            EraseInDisplay(None) => write!(f, "{}", ED),
-            EraseInLine(Some(n)) => write!(f, "{}{}", n, EL),
-            EraseInLine(None) => write!(f, "{}", EL),
+            EraseDisplay(Some(n)) => write!(f, "{}{}", n, ED),
+            EraseDisplay(None) => write!(f, "{}", ED),
+            EraseLine(Some(n)) => write!(f, "{}{}", n, EL),
+            EraseLine(None) => write!(f, "{}", EL),
             SelectGraphicRendition(Some(n)) => write!(f, "{}{}", n, SGR),
             SelectGraphicRendition(None) => write!(f, "{}", SGR),
             CursorHorizontalTab(Some(n)) => write!(f, "{}{}", n, CHT),
