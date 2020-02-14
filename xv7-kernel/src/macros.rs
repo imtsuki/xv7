@@ -16,12 +16,10 @@ macro_rules! println {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    crate::interrupt::without_interrupts(|| {
-        crate::console::CONSOLE_DRIVERS
-            .lock()
-            .write_fmt(args)
-            .unwrap();
-    });
+    crate::console::CONSOLE_DRIVERS
+        .lock()
+        .write_fmt(args)
+        .unwrap();
 }
 
 /// Prints and returns the value of a given expression for quick and dirty

@@ -13,7 +13,7 @@ lazy_static! {
         unsafe {
             idt.double_fault
                 .set_handler_fn(double_fault::handler)
-                .set_stack_index(crate::gdt::DOUBLE_FAULT_IST_INDEX);
+                .set_stack_index(super::gdt::DOUBLE_FAULT_IST_INDEX);
         }
         idt
     };

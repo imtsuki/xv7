@@ -12,6 +12,8 @@ embedded-graphics = { version = "0.6.0-alpha.3", features = ["bmp"] }
 bitvec = { version = "0.17.2", default-features = false, features = ["atomic"] }
 vte = "0.6.0"
 spin = "0.5.2"
-uart_16550 = "0.2.2"
-x86_64 = "0.8.3"
 boot = { path = "../xv7-boot", package = "xv7-boot" }
+
+[target.'cfg(target_arch = "x86_64")'.dependencies]
+x86_64 = "0.8.3"
+uart_16550 = "0.2.2"

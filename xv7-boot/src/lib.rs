@@ -6,7 +6,12 @@
 pub use x86_64::{PhysAddr, VirtAddr};
 
 /// Function signature for kernel entry point.
+#[cfg(target_arch = "x86_64")]
 pub type KernelEntryFn = extern "sysv64" fn(args: &KernelArgs) -> !;
+
+/// Function signature for kernel entry point.
+#[cfg(not(target_arch = "x86_64"))]
+pub type KernelEntryFn = extern "C" fn(args: &KernelArgs) -> !;
 
 /// Kernel entry's virtual address.
 #[derive(Clone, Copy, Debug)]
