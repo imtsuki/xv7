@@ -72,6 +72,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cortex-a"
+version = "2.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd807a12241940332c7c9f6aeaf3f7539d4213853d32445d17c97f3e7eebe118"
+dependencies = [
+ "register",
+]
+
+[[package]]
 name = "either"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -182,6 +191,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "def50a86306165861203e7f84ecffbbdfdea79f0e51039b33de1e952358c47ac"
 
 [[package]]
+name = "register"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6e10c2ba523bc81270ecb9b6ca6704f42cd1efec89fddbfe0e520ad0e218f401"
+dependencies = [
+ "tock-registers",
+]
+
+[[package]]
 name = "rlibc"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -256,6 +274,12 @@ checksum = "30d12b7f8b271567d6d072c49dee16b22271aabfc473e2066e3353e5af0f5230"
 dependencies = [
  "nom",
 ]
+
+[[package]]
+name = "tock-registers"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "70323afdb8082186c0986da0e10f6e4ed103d681c921c00597e98d9806dac20f"
 
 [[package]]
 name = "uart_16550"
@@ -387,6 +411,7 @@ name = "xv7-kernel"
 version = "0.1.0"
 dependencies = [
  "bitvec",
+ "cortex-a",
  "embedded-graphics",
  "lazy_static",
  "spin",
