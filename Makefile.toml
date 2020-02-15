@@ -14,8 +14,8 @@ workspace = false
 dependencies = ["member-xbuild"]
 script = [
 '''
-mkdir -p target/esp/EFI/BOOT
-cp target/x86_64-unknown-uefi/debug/xv7-bootloader-uefi.efi target/esp/EFI/BOOT/BOOTX64.EFI
+mkdir -p target/esp/EFI/Boot
+cp target/x86_64-unknown-uefi/debug/xv7-bootloader-uefi.efi target/esp/EFI/Boot/BootX64.efi
 mkdir -p target/esp/EFI/xv7
 cp target/x86_64/debug/xv7-kernel target/esp/EFI/xv7/kernel
 rust-objdump -d target/esp/EFI/xv7/kernel > target/esp/EFI/xv7/kernel.asm || true
@@ -24,7 +24,8 @@ qemu-system-x86_64 \
     -drive format=raw,file=fat:rw:target/esp \
     -device isa-debug-exit,iobase=0xf4,iosize=0x04 \
     -serial stdio \
-    -m 256M
+    -m 256M \
+    -net none
 '''
 ]
 

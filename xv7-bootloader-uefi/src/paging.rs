@@ -6,8 +6,10 @@ use x86_64::PhysAddr;
 /// Create a temporary page table for kernel's early booting process.
 /// First 4GiB memory is mapped to both lower and higher half address space.
 ///
-/// FIXME: This page table is considered flawed but should be enough.
-/// Switch to `x86_64::structures::paging::Mapper` for better readability.
+/// This page table is considered flawed but should be enough. After kernel
+/// sets up frame allocator, it will immediately switch to a new page table.
+///
+/// TODO: Switch to `x86_64::structures::paging::Mapper` for better readability.
 pub unsafe fn paging() {
     let mut base = L4_PAGE_TABLE;
 
@@ -60,6 +62,7 @@ pub unsafe fn paging() {
 
     let mut cr4 = Cr4::read();
 
+    // Enable all CPU extensions we need.
     cr4 |= Cr4Flags::PAGE_SIZE_EXTENSION
         | Cr4Flags::PHYSICAL_ADDRESS_EXTENSION
         | Cr4Flags::PAGE_GLOBAL
@@ -68,6 +71,7 @@ pub unsafe fn paging() {
 
     Cr4::write(cr4);
 
+    // Switch page table.
     Cr3::write(
         PhysFrame::containing_address(PhysAddr::new(L4_PAGE_TABLE)),
         Cr3Flags::empty(),

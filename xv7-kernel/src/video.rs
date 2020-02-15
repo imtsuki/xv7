@@ -1,5 +1,5 @@
-use embedded_graphics::pixelcolor::Rgb888;
-use embedded_graphics::prelude::*;
+use embedded_graphics::{egtext, text_style};
+use embedded_graphics::{fonts::Font8x16, image::ImageBmp, pixelcolor::Rgb888, prelude::*};
 
 pub struct GopDisplay;
 
@@ -21,4 +21,28 @@ impl DrawTarget<Rgb888> for GopDisplay {
     fn size(&self) -> Size {
         Size::new(800, 600)
     }
+}
+
+pub fn fun_things() {
+    let mut display = GopDisplay;
+
+    display.clear(RgbColor::WHITE);
+
+    let logo: ImageBmp<Rgb888> = ImageBmp::new(include_bytes!("../resources/logo.bmp")).unwrap();
+
+    logo.translate(
+        (
+            (display.size().width - logo.width()) as i32 / 2,
+            (display.size().height - logo.height()) as i32 / 2,
+        )
+            .into(),
+    )
+    .draw(&mut display);
+
+    egtext!(
+        text = "XV7: Yet Another Operating System by imtsuki",
+        top_left = (100, 100),
+        style = text_style!(font = Font8x16, text_color = RgbColor::BLACK)
+    )
+    .draw(&mut display);
 }

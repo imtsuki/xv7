@@ -3,15 +3,23 @@
 #![no_std]
 #![deny(missing_docs)]
 
+use core::fmt;
+use uefi::table::boot::MemoryMapIter;
 pub use x86_64::{PhysAddr, VirtAddr};
 
 /// Function signature for kernel entry point.
 #[cfg(target_arch = "x86_64")]
-pub type KernelEntryFn = extern "sysv64" fn(args: &KernelArgs) -> !;
+pub type KernelEntryFn = extern "sysv64" fn(args: &BootArgs) -> !;
 
 /// Function signature for kernel entry point.
-#[cfg(not(target_arch = "x86_64"))]
-pub type KernelEntryFn = extern "C" fn(args: &KernelArgs) -> !;
+///
+/// FIXME: Do we really need a bootloader for aarch64?
+#[cfg(target_arch = "aarch64")]
+pub type KernelEntryFn = extern "C" fn(args: &BootArgs) -> !;
+
+// For other platforms, no bootloader is needed AFAIK.
+#[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+pub type KernelEntryFn = extern "C" fn() -> !;
 
 /// Kernel entry's virtual address.
 #[derive(Clone, Copy, Debug)]
@@ -30,20 +38,43 @@ impl From<VirtAddr> for KernelEntry {
     }
 }
 
-/// Bootloader passes `KernelArgs` to the kernel entry,
-/// containing some boot information.
-#[derive(Clone, Copy, Debug)]
+/// Bootloader passes `BootArgs` to the kernel entry,
+/// containing boot information.
+#[derive(Clone, Debug)]
 #[repr(C)]
-pub struct KernelArgs {
-    /// Magic number for checking whether `KernelArgs` is passed correctly
+pub struct BootArgs {
+    /// Magic number for checking whether `BootArgs` is passed correctly
     pub magic: u64,
     /// Video frame buffer
     pub frame_buffer: FrameBufferDescriptor,
+    /// Memory map
+    pub memory_map: MemoryMap,
     /* pub memory_map: &'static [MemoryDescriptor], */
 }
 
-/// `KernelArgs` magic value.
-pub const KERNEL_ARGS_MAGIC: u64 = 0xcafe_beef_dead_babe;
+/// Memory map
+#[repr(C)]
+pub struct MemoryMap {
+    /// Memory map iterator
+    pub iter: MemoryMapIter<'static>,
+}
+
+impl Clone for MemoryMap {
+    fn clone(&self) -> Self {
+        unsafe { core::ptr::read(self) }
+    }
+}
+
+impl fmt::Debug for MemoryMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("MemoryMap")
+            .field("len", &self.iter.len())
+            .finish()
+    }
+}
+
+/// `BootArgs` magic value.
+pub const BOOT_ARGS_MAGIC: u64 = 0xcafe_beef_dead_babe;
 
 /// Represents a range of pyhsical memory.
 #[derive(Clone, Copy, Debug)]

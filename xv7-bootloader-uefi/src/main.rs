@@ -4,6 +4,7 @@
 #![feature(asm)]
 #![feature(box_patterns)]
 #![feature(box_syntax)]
+#![feature(maybe_uninit_extra)]
 #![allow(unused_attributes)]
 
 #[macro_use]
@@ -22,15 +23,20 @@ mod paging;
 use chrono::prelude::*;
 use uefi::prelude::*;
 
+use uefi::table::boot::MemoryMapIter;
+
+use core::mem::MaybeUninit;
+
 use config::*;
 
-use boot::KERNEL_ARGS_MAGIC;
-use boot::{FrameBufferDescriptor, KernelArgs, KernelEntry, KernelEntryFn};
+use boot::BOOT_ARGS_MAGIC;
+use boot::{BootArgs, FrameBufferDescriptor, KernelEntry, KernelEntryFn, MemoryMap};
 use x86_64::{PhysAddr, VirtAddr};
 
 static mut KERNEL_ENTRY: KernelEntry = KernelEntry(VirtAddr::new_unchecked(0x0));
 static mut FRAME_BUFFER_BASE: u64 = 0x0;
 static mut FRAME_BUFFER_LEN: usize = 0x0;
+static mut MMAP_ITER: MaybeUninit<MemoryMapIter> = MaybeUninit::uninit();
 
 #[entry]
 fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
@@ -55,7 +61,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     info!("Exiting UEFI boot services and jumping to the kernel");
     let mmap_size = boot_services.memory_map_size();
     let mut mmap_buf = vec![0u8; mmap_size];
-    system_table
+    let (_runtime_services, mmap_iter) = system_table
         .exit_boot_services(image_handle, &mut mmap_buf)
         .expect_success("UEFI exit boot services failed");
 
@@ -65,6 +71,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
 
     unsafe {
         KERNEL_ENTRY = kernel_entry;
+        MMAP_ITER.write(mmap_iter);
         asm!("mov $0, %rsp" : : "r"(STACK_VIRTUAL + STACK_SIZE as u64) : "memory" : "volatile");
         // NOTICE: after we changed rsp, all local variables are no longer avaliable
         // and we must call another function immediately
@@ -76,11 +83,14 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
 unsafe fn call_kernel_entry() -> ! {
     use core::mem;
     let kernel_entry: KernelEntryFn = mem::transmute(KERNEL_ENTRY);
-    let args = KernelArgs {
-        magic: KERNEL_ARGS_MAGIC,
+    let args = BootArgs {
+        magic: BOOT_ARGS_MAGIC,
         frame_buffer: FrameBufferDescriptor {
             base: PhysAddr::new(FRAME_BUFFER_BASE),
             len: FRAME_BUFFER_LEN,
+        },
+        memory_map: MemoryMap {
+            iter: MMAP_ITER.read(),
         },
     };
     kernel_entry(&args);
