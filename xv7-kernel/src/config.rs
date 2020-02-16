@@ -1,3 +1,5 @@
+pub use crate::arch::config::*;
+
 /// Maximum pyhsical memory that we decided to support.
 #[allow(unused)]
 pub const MAX_PHYSICAL_ADDRESS_SUPPORTED: usize = 32;

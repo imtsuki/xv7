@@ -1,0 +1,1 @@
+pub use boot::config::*;

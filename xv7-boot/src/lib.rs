@@ -3,6 +3,8 @@
 #![no_std]
 #![deny(missing_docs)]
 
+pub mod config;
+
 use core::fmt;
 use uefi::table::boot::MemoryMapIter;
 pub use x86_64::{PhysAddr, VirtAddr};
