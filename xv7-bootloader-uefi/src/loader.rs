@@ -13,8 +13,8 @@ use x86_64::structures::paging::{
 use x86_64::{align_up, PhysAddr, VirtAddr};
 use zeroize::Zeroize;
 
-/// Loads kernel image to `KERNEL_PHYSICAL_BASE`.
-/// Returns the entry offset with respect to `KERNEL_PHYSICAL_BASE`.
+/// Loads kernel image to `KERNEL_BASE`.
+/// Returns entry's virtual address.
 pub fn load_elf(
     services: &BootServices,
     page_table: &mut impl Mapper<Size4KiB>,
@@ -58,7 +58,6 @@ pub fn load_elf(
             dst[0..ph.file_range().len()].copy_from_slice(&kernel_image[ph.file_range()]);
 
             // Map to `KERNEL_BASE`.
-
             let flags = PageTableFlags::PRESENT
                 | if ph.is_write() {
                     PageTableFlags::WRITABLE
@@ -70,8 +69,10 @@ pub fn load_elf(
                 } else {
                     PageTableFlags::empty()
                 };
+
             let start_frame = PhysFrame::containing_address(PhysAddr::new(phys_addr));
             let end_frame = PhysFrame::containing_address(PhysAddr::new(phys_addr) + dst.len());
+
             for (i, frame) in PhysFrame::range_inclusive(start_frame, end_frame).enumerate() {
                 let page = Page::containing_address(
                     VirtAddr::new(ph.p_vaddr + i as u64 * Size4KiB::SIZE) + KERNEL_BASE,

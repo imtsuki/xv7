@@ -89,6 +89,13 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
         &mut frame_allocator,
     );
 
+    paging::map_stack(
+        VirtAddr::new(KERNEL_STACK_TOP),
+        KERNEL_STACK_SIZE,
+        &mut page_table,
+        &mut frame_allocator,
+    );
+
     // Exit boot services and jump to the kernel.
     info!("Exiting UEFI boot services and jumping to the kernel");
     let mmap_size = boot_services.memory_map_size();
@@ -100,7 +107,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     unsafe {
         KERNEL_ENTRY = kernel_entry;
         MMAP_ITER.write(mmap_iter);
-        asm!("mov $0, %rsp" : : "r"(STACK_VIRTUAL + STACK_SIZE as u64) : "memory" : "volatile");
+        asm!("mov $0, %rsp" : : "r"(KERNEL_STACK_TOP) : "memory" : "volatile");
         // NOTICE: after we changed rsp, all local variables are no longer avaliable
         // and we must call another function immediately
         call_kernel_entry();

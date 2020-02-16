@@ -2,10 +2,10 @@ use uefi::prelude::*;
 use uefi::table::boot::{AllocateType, MemoryType};
 use x86_64::registers::control::{Cr3, Cr3Flags, Cr4, Cr4Flags};
 use x86_64::structures::paging::{
-    FrameAllocator, Mapper, Page, PageTable, PageTableFlags, PhysFrame, RecursivePageTable,
-    Size2MiB, Size4KiB, UnusedPhysFrame,
+    FrameAllocator, Mapper, Page, PageSize, PageTable, PageTableFlags, PhysFrame,
+    RecursivePageTable, Size2MiB, Size4KiB, UnusedPhysFrame,
 };
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::{align_up, PhysAddr, VirtAddr};
 
 /// UEFI allows us to introduce new memory types
 /// in the 0x70000000..0xFFFFFFFF range.
@@ -103,6 +103,30 @@ pub fn map_physical_memory(
                 allocator,
             )
             .expect("Error occured while mapping complete pyhsical memory")
+            .flush();
+    }
+}
+
+/// Map kernel stack under `KERNEL_STACK_TOP`.
+pub fn map_stack(
+    stack_top: VirtAddr,
+    size: usize,
+    page_table: &mut impl Mapper<Size4KiB>,
+    allocator: &mut impl FrameAllocator<Size4KiB>,
+) {
+    let page_count = align_up(size as u64, Size4KiB::SIZE) / Size4KiB::SIZE;
+    let stack_top = Page::containing_address(stack_top);
+    let stack_bottom = stack_top - page_count;
+    for page in Page::range(stack_bottom, stack_top) {
+        let frame = allocator.allocate_frame().unwrap();
+        page_table
+            .map_to(
+                page,
+                frame,
+                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
+                allocator,
+            )
+            .expect("Error occured while mapping kernel stack")
             .flush();
     }
 }
