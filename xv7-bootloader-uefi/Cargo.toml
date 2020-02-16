@@ -2,6 +2,7 @@
 name = "xv7-bootloader-uefi"
 version = "0.1.0"
 authors = ["imtsuki <me@qjx.app>"]
+license = "MIT OR Apache-2.0"
 description = "XV7 UEFI Bootloader"
 edition = "2018"
 
