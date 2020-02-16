@@ -29,6 +29,11 @@ qemu-system-x86_64 \
 '''
 ]
 
+[tasks.doc]
+workspace = false
+command = "cargo"
+args = ["doc", "--no-deps", "--open"]
+
 [tasks.compose-image]
 workspace = false
 dependencies = ["member-xbuild"]
