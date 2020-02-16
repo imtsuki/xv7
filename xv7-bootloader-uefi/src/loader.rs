@@ -71,14 +71,14 @@ pub fn load_elf(
                 };
 
             let start_frame = PhysFrame::containing_address(PhysAddr::new(phys_addr));
-            let end_frame = PhysFrame::containing_address(PhysAddr::new(phys_addr) + dst.len());
+            let end_frame =
+                PhysFrame::containing_address(PhysAddr::new(phys_addr) + dst.len() - 1u64);
 
             for (i, frame) in PhysFrame::range_inclusive(start_frame, end_frame).enumerate() {
                 let page = Page::containing_address(
                     VirtAddr::new(ph.p_vaddr + i as u64 * Size4KiB::SIZE) + KERNEL_BASE,
                 );
                 let frame = unsafe { UnusedPhysFrame::new(frame) };
-                //dbg!(page);
                 page_table
                     .map_to(page, frame, flags, allocator)
                     .expect("Failed to map kernel segment")
