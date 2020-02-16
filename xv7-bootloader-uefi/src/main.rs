@@ -1,11 +1,11 @@
 #![no_std]
 #![no_main]
+#![cfg_attr(doc, allow(unused_attributes))]
 #![feature(abi_efiapi)]
 #![feature(asm)]
 #![feature(box_patterns)]
 #![feature(box_syntax)]
 #![feature(maybe_uninit_extra)]
-#![allow(unused_attributes)]
 
 #[macro_use]
 extern crate alloc;
@@ -17,21 +17,23 @@ mod macros;
 mod config;
 mod io;
 mod loader;
-mod mem;
 mod paging;
 
-use chrono::prelude::*;
-use uefi::prelude::*;
-
-use uefi::table::boot::MemoryMapIter;
-
+use alloc::boxed::Box;
 use core::mem::MaybeUninit;
-
-use config::*;
 
 use boot::BOOT_ARGS_MAGIC;
 use boot::{BootArgs, FrameBufferDescriptor, KernelEntry, KernelEntryFn, MemoryMap};
-use x86_64::{PhysAddr, VirtAddr};
+
+use chrono::prelude::*;
+use uefi::prelude::*;
+use uefi::table::boot::MemoryMapIter;
+use x86_64::{
+    structures::paging::{PageSize, Size4KiB},
+    PhysAddr, VirtAddr,
+};
+
+use config::*;
 
 static mut KERNEL_ENTRY: KernelEntry = KernelEntry(VirtAddr::new_unchecked(0x0));
 static mut FRAME_BUFFER_BASE: u64 = 0x0;
@@ -51,23 +53,49 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
 
     print_system_information(&system_table).expect_success("Failed to print system information");
 
-    // load kernel ELF image.
-    let (kernel_entry, kernel_memory_descriptor) =
-        loader::load_elf(boot_services, dbg!(KERNEL_IMAGE_PATH));
+    // Initialize our "kernel" frame allocator which marks frames as `MEMORY_TYPE_KERNEL`.
+    let mut frame_allocator = paging::KernelFrameAllocator::new(boot_services);
 
-    dbg!(kernel_entry, kernel_memory_descriptor);
+    let mut page_table = paging::init_recursive(&mut frame_allocator);
+
+    // load kernel ELF image.
+    let kernel_entry = loader::load_elf(
+        boot_services,
+        &mut page_table,
+        &mut frame_allocator,
+        dbg!(KERNEL_IMAGE_PATH),
+    );
+
+    dbg!(kernel_entry);
+
+    let mmap_size = boot_services.memory_map_size();
+    let mut mmap_buf = vec![0u8; mmap_size];
+    let (_, mmap_iter) = boot_services
+        .memory_map(&mut mmap_buf)
+        .expect_success("Failed to get memory map");
+
+    let max_addr = PhysAddr::new(
+        mmap_iter
+            .map(|m| m.phys_start + m.page_count * Size4KiB::SIZE - 1)
+            .max()
+            .unwrap(),
+    );
+
+    // Map complete pyhsical memory to `PAGE_OFFSET_BASE`.
+    paging::map_physical_memory(
+        VirtAddr::new(dbg!(PAGE_OFFSET_BASE)),
+        max_addr,
+        &mut page_table,
+        &mut frame_allocator,
+    );
 
     // Exit boot services and jump to the kernel.
     info!("Exiting UEFI boot services and jumping to the kernel");
     let mmap_size = boot_services.memory_map_size();
-    let mut mmap_buf = vec![0u8; mmap_size];
-    let (_runtime_services, mmap_iter) = system_table
-        .exit_boot_services(image_handle, &mut mmap_buf)
+    let mmap_buf = Box::leak(vec![0u8; mmap_size].into_boxed_slice());
+    let (_, mmap_iter) = system_table
+        .exit_boot_services(image_handle, mmap_buf)
         .expect_success("UEFI exit boot services failed");
-
-    unsafe {
-        paging::paging();
-    }
 
     unsafe {
         KERNEL_ENTRY = kernel_entry;

@@ -1,16 +1,26 @@
 use crate::config::*;
 use crate::io::read_file;
-use boot::{KernelEntry, PhysMemoryDescriptor, PhysMemoryType};
+use crate::paging::MEMORY_TYPE_KERNEL;
+use boot::KernelEntry;
 use goblin::elf;
 use goblin::elf::reloc::*;
 use uefi::prelude::*;
-use x86_64::align_up;
-use x86_64::{PhysAddr, VirtAddr};
+use uefi::table::boot::{AllocateType, MemoryType};
+use x86_64::structures::paging::FrameAllocator;
+use x86_64::structures::paging::{
+    Mapper, Page, PageSize, PageTableFlags, PhysFrame, Size4KiB, UnusedPhysFrame,
+};
+use x86_64::{align_up, PhysAddr, VirtAddr};
 use zeroize::Zeroize;
 
 /// Loads kernel image to `KERNEL_PHYSICAL_BASE`.
 /// Returns the entry offset with respect to `KERNEL_PHYSICAL_BASE`.
-pub fn load_elf(services: &BootServices, path: &str) -> (KernelEntry, PhysMemoryDescriptor) {
+pub fn load_elf(
+    services: &BootServices,
+    page_table: &mut impl Mapper<Size4KiB>,
+    allocator: &mut impl FrameAllocator<Size4KiB>,
+    path: &str,
+) -> KernelEntry {
     let (len, kernel_image) =
         read_file(services, path).expect_success("Could not load kernel image");
 
@@ -18,38 +28,60 @@ pub fn load_elf(services: &BootServices, path: &str) -> (KernelEntry, PhysMemory
 
     let kernel_elf = elf::Elf::parse(&kernel_image).expect("Failed to parse ELF file");
 
-    dbg!(KERNEL_PHYSICAL_BASE, KERNEL_VIRTUAL_BASE);
-
-    let mut kernel_upper_bound = 0;
+    dbg!(KERNEL_BASE);
 
     for ph in kernel_elf.program_headers {
         if ph.p_type == elf::program_header::PT_LOAD {
             info!(
                 "PT_LOAD range = {:#x?}, to address {:#x} + {:#x?}",
                 ph.file_range(),
-                KERNEL_PHYSICAL_BASE,
+                KERNEL_BASE,
                 ph.vm_range()
             );
+            // Allocate pages for this segment.
+            let page_count = (align_up(ph.p_memsz, Size4KiB::SIZE) / Size4KiB::SIZE) as usize;
 
-            if ph.vm_range().end > kernel_upper_bound {
-                kernel_upper_bound = ph.vm_range().end;
-            }
+            let phys_addr = services
+                .allocate_pages(
+                    AllocateType::AnyPages,
+                    MemoryType(MEMORY_TYPE_KERNEL),
+                    page_count,
+                )
+                .expect_success("Failed to allocate pages while loading kernel segment");
 
             let dst = unsafe {
-                core::slice::from_raw_parts_mut(
-                    (ph.p_vaddr + KERNEL_PHYSICAL_BASE) as *mut u8,
-                    ph.vm_range().len(),
-                )
+                core::slice::from_raw_parts_mut(phys_addr as *mut u8, ph.vm_range().len())
             };
 
             dst.zeroize();
 
-            unsafe {
-                core::ptr::copy(
-                    kernel_image.as_ptr().offset(ph.p_offset as isize),
-                    dst.as_mut_ptr(),
-                    ph.file_range().len(),
+            dst[0..ph.file_range().len()].copy_from_slice(&kernel_image[ph.file_range()]);
+
+            // Map to `KERNEL_BASE`.
+
+            let flags = PageTableFlags::PRESENT
+                | if ph.is_write() {
+                    PageTableFlags::WRITABLE
+                } else {
+                    PageTableFlags::empty()
+                }
+                | if !ph.is_executable() {
+                    PageTableFlags::NO_EXECUTE
+                } else {
+                    PageTableFlags::empty()
+                };
+            let start_frame = PhysFrame::containing_address(PhysAddr::new(phys_addr));
+            let end_frame = PhysFrame::containing_address(PhysAddr::new(phys_addr) + dst.len());
+            for (i, frame) in PhysFrame::range_inclusive(start_frame, end_frame).enumerate() {
+                let page = Page::containing_address(
+                    VirtAddr::new(ph.p_vaddr + i as u64 * Size4KiB::SIZE) + KERNEL_BASE,
                 );
+                let frame = unsafe { UnusedPhysFrame::new(frame) };
+                //dbg!(page);
+                page_table
+                    .map_to(page, frame, flags, allocator)
+                    .expect("Failed to map kernel segment")
+                    .flush();
             }
         }
     }
@@ -58,9 +90,9 @@ pub fn load_elf(services: &BootServices, path: &str) -> (KernelEntry, PhysMemory
     for reloc in kernel_elf.dynrelas.iter() {
         match reloc.r_type {
             R_X86_64_RELATIVE => {
-                let addr = (KERNEL_PHYSICAL_BASE + reloc.r_offset) as *mut u64;
+                let addr = (KERNEL_BASE + reloc.r_offset) as *mut u64;
                 unsafe {
-                    *addr = KERNEL_VIRTUAL_BASE + reloc.r_addend.unwrap() as u64;
+                    *addr = KERNEL_BASE + reloc.r_addend.unwrap() as u64;
                 }
             }
             _ => unimplemented!("Unhandled reloc type!"),
@@ -70,12 +102,5 @@ pub fn load_elf(services: &BootServices, path: &str) -> (KernelEntry, PhysMemory
     assert_eq!(kernel_elf.dynrels.len(), 0);
     assert_eq!(kernel_elf.pltrelocs.len(), 0);
 
-    (
-        KernelEntry(VirtAddr::new(KERNEL_VIRTUAL_BASE + kernel_elf.entry)),
-        PhysMemoryDescriptor {
-            memory_type: PhysMemoryType::Kernel,
-            base: PhysAddr::new(KERNEL_PHYSICAL_BASE),
-            page_count: align_up(kernel_upper_bound as u64, 4096) as usize / 4096,
-        },
-    )
+    KernelEntry(VirtAddr::new(KERNEL_BASE + kernel_elf.entry))
 }

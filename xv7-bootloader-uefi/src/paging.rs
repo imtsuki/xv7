@@ -1,79 +1,108 @@
-use crate::config::L4_PAGE_TABLE;
+use uefi::prelude::*;
+use uefi::table::boot::{AllocateType, MemoryType};
 use x86_64::registers::control::{Cr3, Cr3Flags, Cr4, Cr4Flags};
-use x86_64::structures::paging::{PageTable, PageTableFlags, PhysFrame};
-use x86_64::PhysAddr;
+use x86_64::structures::paging::{
+    FrameAllocator, Mapper, Page, PageTable, PageTableFlags, PhysFrame, RecursivePageTable,
+    Size2MiB, Size4KiB, UnusedPhysFrame,
+};
+use x86_64::{PhysAddr, VirtAddr};
 
-/// Create a temporary page table for kernel's early booting process.
-/// First 4GiB memory is mapped to both lower and higher half address space.
-///
-/// This page table is considered flawed but should be enough. After kernel
-/// sets up frame allocator, it will immediately switch to a new page table.
-///
-/// TODO: Switch to `x86_64::structures::paging::Mapper` for better readability.
-pub unsafe fn paging() {
-    let mut base = L4_PAGE_TABLE;
+/// UEFI allows us to introduce new memory types
+/// in the 0x70000000..0xFFFFFFFF range.
+pub const MEMORY_TYPE_KERNEL: u32 = 0x70000000;
 
-    // L4 table is located at 0x70000
-    let l4_table = &mut *(base as *mut PageTable);
-    l4_table.zero();
+/// This frame allocator marks frames as `MEMORY_TYPE_KERNEL`.
+pub struct KernelFrameAllocator<'a>(&'a BootServices);
 
-    // Map to L3 table, to both lower-half and higher-half
-    l4_table[0b000_000_000].set_addr(
-        PhysAddr::new(base + 0x1000),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-    );
-    l4_table[0b100_000_000].set_addr(
-        PhysAddr::new(base + 0x1000),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-    );
+impl<'a> KernelFrameAllocator<'a> {
+    pub fn new(services: &'a BootServices) -> Self {
+        Self(services)
+    }
+}
+
+unsafe impl<'a> FrameAllocator<Size4KiB> for KernelFrameAllocator<'a> {
+    fn allocate_frame(&mut self) -> Option<UnusedPhysFrame<Size4KiB>> {
+        let phys_addr = self
+            .0
+            .allocate_pages(AllocateType::AnyPages, MemoryType(MEMORY_TYPE_KERNEL), 1)
+            .expect_success("Failed to allocate physical frame");
+        let phys_addr = PhysAddr::new(phys_addr);
+        let phys_frame = PhysFrame::containing_address(phys_addr);
+        Some(unsafe { UnusedPhysFrame::new(phys_frame) })
+    }
+}
+
+/// Set up a basic recursive page table.
+pub fn init_recursive(
+    allocator: &mut impl FrameAllocator<Size4KiB>,
+) -> RecursivePageTable<'static> {
+    // First we do a copy for the level 4 table here, because the old table
+    // has memory type `BOOT_SERVICES_DATA`. Level 3 ~ level 1 tables will
+    // be discarded eventually so we can ignore them.
+    let old_l4_table_addr = Cr3::read().0.start_address().as_u64();
+    let l4_table_frame = allocator.allocate_frame().unwrap().frame();
+    let l4_table_addr = l4_table_frame.start_address().as_u64();
+
+    // Safety: newly allocated frame is guaranteed to be valid and unused
+    unsafe {
+        core::ptr::copy(
+            old_l4_table_addr as *const u8,
+            l4_table_addr as *mut u8,
+            l4_table_frame.size() as usize,
+        )
+    };
+
+    // Safety: same as above
+    let l4_table = unsafe { &mut *(l4_table_addr as *mut PageTable) };
 
     // Recursive mapping
-    l4_table[0b111_111_111].set_addr(
-        PhysAddr::new(base),
-        PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
+    l4_table[0b111_111_111].set_frame(
+        l4_table_frame,
+        PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
     );
-
-    // Move to L3 table
-    base += 0x1000;
-
-    // L3 table is located at 0x71000
-    let l3_table = &mut *(base as *mut PageTable);
-    l3_table.zero();
-
-    base += 0x1000;
-
-    // Map 0..4GiB to higher-half.
-    // L2 tables are: 0x72000, 0x73000, 0x74000, 0x75000.
-    for i in 0..4 {
-        let l2_table_addr = base + 0x1000 + 0x1000 * i as u64;
-        l3_table[i].set_addr(
-            PhysAddr::new(l2_table_addr),
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE,
-        );
-        let l2_table = &mut *(l2_table_addr as *mut PageTable);
-        // Map each 1GiB address space.
-        for (offset, entry) in l2_table.iter_mut().enumerate() {
-            entry.set_addr(
-                PhysAddr::new(0x40000000 * i as u64 + 0x200000 * offset as u64),
-                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::HUGE_PAGE,
-            );
-        }
-    }
-
-    let mut cr4 = Cr4::read();
 
     // Enable all CPU extensions we need.
-    cr4 |= Cr4Flags::PAGE_SIZE_EXTENSION
-        | Cr4Flags::PHYSICAL_ADDRESS_EXTENSION
-        | Cr4Flags::PAGE_GLOBAL
-        | Cr4Flags::OSFXSR
-        | Cr4Flags::OSXSAVE;
+    unsafe {
+        Cr4::update(|cr4| {
+            cr4.insert(
+                Cr4Flags::PAGE_SIZE_EXTENSION
+                    | Cr4Flags::PHYSICAL_ADDRESS_EXTENSION
+                    | Cr4Flags::PAGE_GLOBAL
+                    | Cr4Flags::OSFXSR
+                    | Cr4Flags::OSXSAVE,
+            )
+        })
+    };
 
-    Cr4::write(cr4);
+    // Switch to the new page table...
+    unsafe { Cr3::write(l4_table_frame, Cr3Flags::empty()) };
 
-    // Switch page table.
-    Cr3::write(
-        PhysFrame::containing_address(PhysAddr::new(L4_PAGE_TABLE)),
-        Cr3Flags::empty(),
-    );
+    // And we have it!
+    let l4_table = unsafe { &mut *(0xFFFF_FFFF_FFFF_F000 as *mut PageTable) };
+
+    RecursivePageTable::new(l4_table).unwrap()
+}
+
+/// Map complete pyhsical memory to `offset`, which is `PAGE_OFFSET_BASE`.
+pub fn map_physical_memory(
+    offset: VirtAddr,
+    max_addr: PhysAddr,
+    page_table: &mut impl Mapper<Size2MiB>,
+    allocator: &mut impl FrameAllocator<Size4KiB>,
+) {
+    let start_frame = PhysFrame::containing_address(PhysAddr::new(0));
+    let end_frame = PhysFrame::containing_address(max_addr);
+    for frame in PhysFrame::range_inclusive(start_frame, end_frame) {
+        let page = Page::containing_address(offset + frame.start_address().as_u64());
+        let frame = unsafe { UnusedPhysFrame::new(frame) };
+        page_table
+            .map_to(
+                page,
+                frame,
+                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
+                allocator,
+            )
+            .expect("Error occured while mapping complete pyhsical memory")
+            .flush();
+    }
 }
