@@ -22,5 +22,5 @@ pub fn kmain() -> ! {
     #[cfg(target_arch = "x86_64")]
     memory::FRAME_ALLOCATOR.lock().hello();
     video::fun_things();
-    arch::halt_loop();
+    arch::idle();
 }

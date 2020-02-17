@@ -1,7 +1,7 @@
 mod start;
 
 #[inline(always)]
-pub fn halt_loop() -> ! {
+pub fn idle() -> ! {
     loop {
         unsafe {
             asm!("wfe");
