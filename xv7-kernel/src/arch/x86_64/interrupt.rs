@@ -11,8 +11,10 @@ lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
         let mut idt = InterruptDescriptorTable::new();
         idt.breakpoint.set_handler_fn(breakpoint::handler);
-        idt.page_fault.set_handler_fn(page_fault::handler);
         unsafe {
+            idt.page_fault
+                .set_handler_fn(page_fault::handler)
+                .set_stack_index(super::gdt::PAGE_FAULT_IST_INDEX);
             idt.double_fault
                 .set_handler_fn(double_fault::handler)
                 .set_stack_index(super::gdt::DOUBLE_FAULT_IST_INDEX);
