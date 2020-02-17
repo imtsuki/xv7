@@ -1,6 +1,7 @@
 pub mod config;
 mod gdt;
 mod interrupt;
+mod paging;
 mod start;
 
 #[inline(always)]

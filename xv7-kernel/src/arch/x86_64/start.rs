@@ -19,6 +19,7 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
         args.magic, BOOT_ARGS_MAGIC,
         "BootArgs magic number check failed"
     );
+    paging::disable_identity_mapping();
 
     interrupt::without_interrupts(|| {
         print!(

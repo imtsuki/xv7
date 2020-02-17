@@ -105,8 +105,13 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
         .expect_success("UEFI exit boot services failed");
 
     unsafe {
-        KERNEL_ENTRY = kernel_entry;
+        // FIXME: A dirty HACK to get `mmap_iter` to point to mapped memory.
+        let mut tuple: (u64, usize, usize, usize, usize) = core::mem::transmute(mmap_iter);
+        tuple.0 += PAGE_OFFSET_BASE;
+        let mmap_iter: MemoryMapIter = core::mem::transmute(tuple);
         MMAP_ITER.write(mmap_iter);
+
+        KERNEL_ENTRY = kernel_entry;
         asm!("mov $0, %rsp" : : "r"(KERNEL_STACK_TOP) : "memory" : "volatile");
         // NOTICE: after we changed rsp, all local variables are no longer avaliable
         // and we must call another function immediately
