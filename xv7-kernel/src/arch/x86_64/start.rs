@@ -1,7 +1,8 @@
 use super::*;
 use crate::ansi::{CtrlSeq, EraseParam};
+use crate::memory::FRAME_ALLOCATOR;
 use boot::{BootArgs, KernelEntryFn, BOOT_ARGS_MAGIC};
-use x86_64::structures::paging::FrameAllocator;
+use x86_64::structures::paging::{FrameAllocator, FrameDeallocator};
 
 #[used]
 static BSS_ZERO_CHECK: u64 = 0;
@@ -35,12 +36,13 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     paging::init_frame_allocator(args);
 
     // Test our frame allocator.
-    let frame = crate::memory::FRAME_ALLOCATOR.lock().allocate_frame();
+    let frame = FRAME_ALLOCATOR.lock().allocate_frame();
     dbg!(frame);
-    let frame = crate::memory::FRAME_ALLOCATOR.lock().allocate_frame();
+    let frame = FRAME_ALLOCATOR.lock().allocate_frame();
     dbg!(frame);
-    let frame = crate::memory::FRAME_ALLOCATOR.lock().allocate_frame();
-    dbg!(frame);
+    let frame = FRAME_ALLOCATOR.lock().allocate_frame();
+
+    FRAME_ALLOCATOR.lock().deallocate_frame(frame.unwrap());
 
     dbg!(unsafe { x86_64::registers::model_specific::Msr::new(0x1b).read() });
 
