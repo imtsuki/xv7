@@ -18,9 +18,6 @@ mod video;
 
 pub fn kmain() -> ! {
     println!("Now we are in kernel!");
-
-    #[cfg(target_arch = "x86_64")]
-    memory::FRAME_ALLOCATOR.lock().hello();
     video::fun_things();
     arch::idle();
 }

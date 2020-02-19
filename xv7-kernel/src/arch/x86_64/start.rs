@@ -1,6 +1,7 @@
 use super::*;
 use crate::ansi::{CtrlSeq, EraseParam};
 use boot::{BootArgs, KernelEntryFn, BOOT_ARGS_MAGIC};
+use x86_64::structures::paging::FrameAllocator;
 
 #[used]
 static BSS_ZERO_CHECK: u64 = 0;
@@ -19,27 +20,32 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
         args.magic, BOOT_ARGS_MAGIC,
         "BootArgs magic number check failed"
     );
+
+    print!(
+        "{}{}{}",
+        CtrlSeq::EraseDisplay(Some(EraseParam::Entire)),
+        CtrlSeq::CursorPosition(None, None),
+        CtrlSeq::SelectGraphicRendition(None),
+    );
+
+    dbg!(args);
+
     paging::disable_identity_mapping();
 
-    interrupt::without_interrupts(|| {
-        print!(
-            "{}{}{}",
-            CtrlSeq::EraseDisplay(Some(EraseParam::Entire)),
-            CtrlSeq::CursorPosition(None, None),
-            CtrlSeq::SelectGraphicRendition(None),
-        );
+    paging::init_frame_allocator(args);
 
-        for descriptor in args.memory_map.clone().iter {
-            dbg!(descriptor);
-        }
+    // Test our frame allocator.
+    let frame = crate::memory::FRAME_ALLOCATOR.lock().allocate_frame();
+    dbg!(frame);
+    let frame = crate::memory::FRAME_ALLOCATOR.lock().allocate_frame();
+    dbg!(frame);
+    let frame = crate::memory::FRAME_ALLOCATOR.lock().allocate_frame();
+    dbg!(frame);
 
-        dbg!(args);
+    dbg!(unsafe { x86_64::registers::model_specific::Msr::new(0x1b).read() });
 
-        dbg!(unsafe { x86_64::registers::model_specific::Msr::new(0x1b).read() });
-
-        gdt::init();
-        interrupt::init();
-    });
+    gdt::init();
+    interrupt::init();
 
     crate::kmain();
 }

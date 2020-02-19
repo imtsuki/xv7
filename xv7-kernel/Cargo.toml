@@ -18,6 +18,7 @@ boot = { path = "../xv7-boot", package = "xv7-boot" }
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86_64 = "0.8.3"
 uart_16550 = "0.2.2"
+uefi = "0.4.3"
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 cortex-a = "2.9.0"

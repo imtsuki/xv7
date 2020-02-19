@@ -417,6 +417,7 @@ dependencies = [
  "lazy_static",
  "spin",
  "uart_16550",
+ "uefi",
  "vte",
  "x86_64",
  "xv7-boot",
