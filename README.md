@@ -22,6 +22,12 @@ Simply run the following command:
 cargo make qemu
 ```
 
+You can use KVM to speed up emulation:
+
+```bash
+cargo make qemu-kvm
+```
+
 ## License
 
 This project is licensed under either of
