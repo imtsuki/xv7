@@ -9,7 +9,7 @@ args = ["xbuild"]
 command = "cargo"
 args = ["make", "xbuild"]
 
-[tasks.qemu]
+[tasks.compose-esp]
 workspace = false
 dependencies = ["member-xbuild"]
 script = [
@@ -19,6 +19,14 @@ cp target/x86_64-unknown-uefi/debug/xv7-bootloader-uefi.efi target/esp/EFI/Boot/
 mkdir -p target/esp/EFI/xv7
 cp target/x86_64/debug/xv7-kernel target/esp/EFI/xv7/kernel
 rust-objdump -d target/esp/EFI/xv7/kernel > target/esp/EFI/xv7/kernel.asm || true
+'''
+]
+
+[tasks.qemu]
+workspace = false
+dependencies = ["compose-esp"]
+script = [
+'''
 qemu-system-x86_64 \
     -drive if=pflash,format=raw,file=.qemu/OVMF-pure-efi.fd,readonly=on \
     -drive format=raw,file=fat:rw:target/esp \
@@ -31,14 +39,9 @@ qemu-system-x86_64 \
 
 [tasks.qemu-kvm]
 workspace = false
-dependencies = ["member-xbuild"]
+dependencies = ["compose-esp"]
 script = [
 '''
-mkdir -p target/esp/EFI/Boot
-cp target/x86_64-unknown-uefi/debug/xv7-bootloader-uefi.efi target/esp/EFI/Boot/BootX64.efi
-mkdir -p target/esp/EFI/xv7
-cp target/x86_64/debug/xv7-kernel target/esp/EFI/xv7/kernel
-rust-objdump -d target/esp/EFI/xv7/kernel > target/esp/EFI/xv7/kernel.asm || true
 qemu-system-x86_64 \
     -drive if=pflash,format=raw,file=.qemu/OVMF-pure-efi.fd,readonly=on \
     -drive format=raw,file=fat:rw:target/esp \

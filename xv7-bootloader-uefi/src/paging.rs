@@ -52,8 +52,6 @@ pub fn init_recursive(
         )
     };
 
-
-
     // Safety: same as above
     let l4_table = unsafe { &mut *(l4_table_addr as *mut PageTable) };
 
