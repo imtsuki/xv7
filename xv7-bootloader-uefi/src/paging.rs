@@ -52,6 +52,8 @@ pub fn init_recursive(
         )
     };
 
+
+
     // Safety: same as above
     let l4_table = unsafe { &mut *(l4_table_addr as *mut PageTable) };
 
@@ -69,7 +71,6 @@ pub fn init_recursive(
                     | Cr4Flags::PHYSICAL_ADDRESS_EXTENSION
                     | Cr4Flags::PAGE_GLOBAL
                     | Cr4Flags::OSFXSR
-                    | Cr4Flags::OSXSAVE,
             )
         })
     };
