@@ -14,6 +14,7 @@ mod console;
 mod lang_item;
 #[cfg(target_arch = "x86_64")]
 mod memory;
+mod pretty;
 mod video;
 
 pub fn kmain() -> ! {

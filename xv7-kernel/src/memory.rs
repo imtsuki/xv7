@@ -1,4 +1,5 @@
 use crate::config::*;
+use crate::pretty::Pretty;
 use bitvec::prelude::*;
 use boot::PhysAddr;
 use lazy_static::lazy_static;
@@ -28,15 +29,15 @@ impl<'map> BitmapFrameAllocator<'map> {
 
     pub fn print_statistics(&mut self) {
         println!(
-            "BitmapFrameAllocator: bitmap occupies {}KiB, maximum supported pyhsical memory: {}GiB",
-            self.inner.len() / 1024,
-            self.inner.len() * 4096 / 1024 / 1024 / 1024,
+            "BitmapFrameAllocator: bitmap occupies {}, maximum supported pyhsical memory: {}",
+            self.inner.len().pretty(),
+            (self.inner.len() * Size4KiB::SIZE as usize).pretty(),
         );
 
         println!(
-            "BitmapFrameAllocator: {} frames available, which is {}MiB of memory",
+            "BitmapFrameAllocator: {} frames available, which is {} of memory",
             self.inner.count_ones(),
-            self.inner.count_ones() * 4096 / 1024 / 1024,
+            (self.inner.count_ones() * Size4KiB::SIZE as usize).pretty(),
         );
     }
 }

@@ -18,7 +18,6 @@ pub fn init_frame_allocator(args: &BootArgs) {
 
     for descriptor in args.memory_map.clone().iter {
         if descriptor.ty == MemoryType::CONVENTIONAL {
-            dbg!(descriptor);
             allocator.insert_memory_region(
                 PhysAddr::new(descriptor.phys_start),
                 descriptor.page_count as usize,
