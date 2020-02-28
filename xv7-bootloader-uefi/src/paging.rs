@@ -1,6 +1,7 @@
 use uefi::prelude::*;
 use uefi::table::boot::{AllocateType, MemoryType};
 use x86_64::registers::control::{Cr3, Cr3Flags, Cr4, Cr4Flags};
+use x86_64::registers::model_specific::{Efer, EferFlags};
 use x86_64::structures::paging::{
     FrameAllocator, Mapper, Page, PageSize, PageTable, PageTableFlags, PhysFrame,
     RecursivePageTable, Size2MiB, Size4KiB, UnusedPhysFrame,
@@ -9,7 +10,7 @@ use x86_64::{align_up, PhysAddr, VirtAddr};
 
 /// UEFI allows us to introduce new memory types
 /// in the 0x70000000..0xFFFFFFFF range.
-pub const MEMORY_TYPE_KERNEL: u32 = 0x70000000;
+pub const MEMORY_TYPE_KERNEL: u32 = 0x80000000;
 
 /// This frame allocator marks frames as `MEMORY_TYPE_KERNEL`.
 pub struct KernelFrameAllocator<'a>(&'a BootServices);
@@ -68,9 +69,10 @@ pub fn init_recursive(
                 Cr4Flags::PAGE_SIZE_EXTENSION
                     | Cr4Flags::PHYSICAL_ADDRESS_EXTENSION
                     | Cr4Flags::PAGE_GLOBAL
-                    | Cr4Flags::OSFXSR
+                    | Cr4Flags::OSFXSR,
             )
-        })
+        });
+        Efer::update(|efer| efer.insert(EferFlags::NO_EXECUTE_ENABLE));
     };
 
     // Switch to the new page table...

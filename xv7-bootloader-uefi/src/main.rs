@@ -57,7 +57,6 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     let mut frame_allocator = paging::KernelFrameAllocator::new(boot_services);
 
     let mut page_table = paging::init_recursive(&mut frame_allocator);
-
     // load kernel ELF image.
     let kernel_entry = loader::load_elf(
         boot_services,
@@ -78,7 +77,8 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
         mmap_iter
             .map(|m| m.phys_start + m.page_count * Size4KiB::SIZE - 1)
             .max()
-            .unwrap(),
+            .unwrap()
+            .max(0xFFFF_FFFF),
     );
 
     // Map complete pyhsical memory to `PAGE_OFFSET_BASE`.
