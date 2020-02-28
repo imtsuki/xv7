@@ -11,13 +11,13 @@ edition = "2018"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 embedded-graphics = { version = "0.6.0-alpha.3", features = ["bmp"] }
 bitvec = { version = "0.17.2", default-features = false, features = ["atomic"] }
-vte = "0.6.0"
+vte = "0.7.0"
 spin = "0.5.2"
 boot = { path = "../xv7-boot", package = "xv7-boot" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
-x86_64 = "0.8.3"
-uart_16550 = "0.2.2"
+x86_64 = "0.9.5"
+uart_16550 = "0.2.4"
 uefi = "0.4.3"
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]

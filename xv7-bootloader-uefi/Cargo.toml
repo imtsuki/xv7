@@ -11,7 +11,7 @@ edition = "2018"
 [dependencies]
 uefi = "0.4.3"
 uefi-services = "0.2.1"
-x86_64 = "0.8.3"
+x86_64 = "0.9.5"
 zeroize = "1.1.0"
 goblin = { version = "0.2.0", default-features = false, features = ["elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive", "endian_fd"] }
 log = { version = "0.4.8", default-features = false }
