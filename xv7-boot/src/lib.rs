@@ -114,6 +114,8 @@ pub struct FrameBufferDescriptor {
     pub base: PhysAddr,
     /// buffer length
     pub len: usize,
+    /// resolution
+    pub resolution: (usize, usize),
 }
 
 #[allow(missing_docs)]

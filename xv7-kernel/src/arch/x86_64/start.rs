@@ -49,5 +49,7 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     gdt::init();
     interrupt::init();
 
+    crate::video::fun_things(args);
+
     crate::kmain();
 }

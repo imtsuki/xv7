@@ -2,11 +2,17 @@
 #![no_main]
 #![cfg_attr(doc, allow(unused_attributes))]
 #![cfg_attr(target_arch = "x86_64", feature(abi_x86_interrupt))]
+#![feature(alloc_error_handler)]
 #![feature(asm)]
+#![feature(box_syntax)]
+#![feature(box_patterns)]
+
+extern crate alloc;
 
 #[macro_use]
 mod macros;
 
+mod allocator;
 mod ansi;
 mod arch;
 mod config;
@@ -19,6 +25,8 @@ mod video;
 
 pub fn kmain() -> ! {
     println!("Now we are in kernel!");
-    video::fun_things();
     arch::idle();
 }
+
+#[global_allocator]
+static ALLOCATOR: allocator::Dummy = allocator::Dummy;

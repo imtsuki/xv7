@@ -1,7 +1,9 @@
+use crate::config::PAGE_OFFSET_BASE;
+use boot::BootArgs;
 use embedded_graphics::{egtext, text_style};
 use embedded_graphics::{fonts::Font8x16, image::ImageBmp, pixelcolor::Rgb888, prelude::*};
 
-pub struct GopDisplay;
+pub struct GopDisplay(u64, (usize, usize));
 
 impl DrawTarget<Rgb888> for GopDisplay {
     #[inline(always)]
@@ -11,7 +13,7 @@ impl DrawTarget<Rgb888> for GopDisplay {
 
         unsafe {
             core::ptr::write_volatile(
-                (0xffff_8000_8000_0000 as *mut u32).add(index as usize),
+                ((PAGE_OFFSET_BASE + self.0) as *mut u32).add(index as usize),
                 ((color.r() as u32) << 16) | ((color.g() as u32) << 8) | (color.b() as u32),
             );
         }
@@ -19,12 +21,15 @@ impl DrawTarget<Rgb888> for GopDisplay {
 
     #[inline(always)]
     fn size(&self) -> Size {
-        Size::new(800, 600)
+        Size::new((self.1).0 as u32, (self.1).1 as u32)
     }
 }
 
-pub fn fun_things() {
-    let mut display = GopDisplay;
+pub fn fun_things(args: &BootArgs) {
+    let mut display = GopDisplay(
+        args.frame_buffer.base.as_u64(),
+        args.frame_buffer.resolution,
+    );
 
     display.clear(RgbColor::WHITE);
 

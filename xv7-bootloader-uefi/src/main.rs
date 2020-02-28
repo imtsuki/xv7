@@ -38,6 +38,7 @@ use config::*;
 static mut KERNEL_ENTRY: KernelEntry = KernelEntry(VirtAddr::new_unchecked(0x0));
 static mut FRAME_BUFFER_BASE: u64 = 0x0;
 static mut FRAME_BUFFER_LEN: usize = 0x0;
+static mut RESOLUTION: (usize, usize) = (0, 0);
 static mut MMAP_ITER: MaybeUninit<MemoryMapIter> = MaybeUninit::uninit();
 
 #[entry]
@@ -128,6 +129,7 @@ unsafe fn call_kernel_entry() -> ! {
         frame_buffer: FrameBufferDescriptor {
             base: PhysAddr::new(FRAME_BUFFER_BASE),
             len: FRAME_BUFFER_LEN,
+            resolution: RESOLUTION,
         },
         memory_map: MemoryMap {
             iter: MMAP_ITER.read(),
@@ -182,6 +184,7 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
     unsafe {
         FRAME_BUFFER_BASE = buf.as_mut_ptr() as u64;
         FRAME_BUFFER_LEN = buf.size();
+        RESOLUTION = gop.current_mode_info().resolution();
     }
 
     Ok(().into())
