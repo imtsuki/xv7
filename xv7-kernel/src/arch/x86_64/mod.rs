@@ -1,6 +1,6 @@
 pub mod config;
 mod gdt;
-mod interrupt;
+pub mod interrupt;
 mod paging;
 mod start;
 
