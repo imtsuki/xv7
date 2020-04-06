@@ -9,9 +9,10 @@ edition = "2018"
 
 [dependencies]
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-embedded-graphics = { version = "0.6.0-alpha.3", features = ["bmp"] }
-bitvec = { version = "0.17.2", default-features = false, features = ["atomic"] }
-vte = "0.7.0"
+embedded-graphics = { version = "0.6.1" }
+tinybmp = { version = "0.2.2", features = [ "graphics" ]}
+bitvec = { version = "0.17.4", default-features = false, features = ["atomic"] }
+vte = "0.7.1"
 spin = "0.5.2"
 boot = { path = "../xv7-boot", package = "xv7-boot" }
 

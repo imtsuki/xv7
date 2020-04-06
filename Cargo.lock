@@ -32,9 +32,9 @@ checksum = "cf1de2fe8c75bc145a2f577add951f8134889b4795d47466a54a5c846d691693"
 
 [[package]]
 name = "bitvec"
-version = "0.17.2"
+version = "0.17.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fe4300c1d7a9ea6f3e3f39c10b39862bb79e1175c0572b6b49539a30e5562f5"
+checksum = "41262f11d771fd4a61aa3ce019fca363b4b6c282fca9da2a31186d3965a47a5c"
 dependencies = [
  "either",
  "radium",
@@ -69,9 +69,9 @@ checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
 
 [[package]]
 name = "chrono"
-version = "0.4.10"
+version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31850b4a4d6bae316f7a09e691c944c28299298837edc0a03f755618c23cbc01"
+checksum = "80094f509cf8b5ae86a4966a39b3ff66cd7e2a3e594accec3743ff3fabeab5b2"
 dependencies = [
  "num-integer",
  "num-traits",
@@ -94,19 +94,18 @@ checksum = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
 
 [[package]]
 name = "embedded-graphics"
-version = "0.6.0-alpha.3"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f35680a4c0a85844fd207ba20eb4a3611189bb714cdb3b2327edd9f0e9f562eb"
+checksum = "619ef7a30b5368c6350a9edb41c628499a0a77072d1bfa949044473d23734e3c"
 dependencies = [
  "byteorder",
- "tinybmp",
 ]
 
 [[package]]
 name = "goblin"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0259546d6aed5dd1f4efc3ae663cae62912ceb927c0e96ae1fc8a22ab1516763"
+checksum = "ddd5e3132801a1ac34ac53b97acde50c4685414dd2f291b9ea52afa6f07468c8"
 dependencies = [
  "log",
  "plain",
@@ -285,10 +284,11 @@ dependencies = [
 
 [[package]]
 name = "tinybmp"
-version = "0.1.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30d12b7f8b271567d6d072c49dee16b22271aabfc473e2066e3353e5af0f5230"
+checksum = "5c6946e37d7f018ce9428cf200b5fa4a43cef3c6deb7eed84dfa13d17bca8063"
 dependencies = [
+ "embedded-graphics",
  "nom",
 ]
 
@@ -372,9 +372,9 @@ checksum = "914b1a6776c4c929a602fafd8bc742e06365d4bcbe48c30f9cca5824f70dc9dd"
 
 [[package]]
 name = "vte"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5adfb0373391c805ab48fa2b167df036358b5b851f3e191e7b5dc2ec50db6a9"
+checksum = "8299f6cd1505d50a633aa31b4088aeffe511099d8c7bc38e5d3669379a08a2b8"
 dependencies = [
  "arrayvec",
  "utf8parse",
@@ -444,6 +444,7 @@ dependencies = [
  "lazy_static",
  "raw-cpuid",
  "spin",
+ "tinybmp",
  "uart_16550",
  "uefi",
  "vte",

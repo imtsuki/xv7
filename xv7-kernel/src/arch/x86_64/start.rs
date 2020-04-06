@@ -1,11 +1,9 @@
 use super::*;
 use crate::ansi::{CtrlSeq, EraseParam};
-use crate::config::*;
 use crate::memory::FRAME_ALLOCATOR;
 use boot::{BootArgs, KernelEntryFn, BOOT_ARGS_MAGIC};
 use cpuid::CpuId;
 use x86_64::structures::paging::{FrameAllocator, FrameDeallocator};
-use x86_64::VirtAddr;
 
 #[used]
 static BSS_ZERO_CHECK: u64 = 0;

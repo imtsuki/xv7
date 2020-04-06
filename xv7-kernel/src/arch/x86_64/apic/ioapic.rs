@@ -1,5 +1,5 @@
 use crate::config::*;
-use x86_64::{PhysAddr, VirtAddr};
+use x86_64::VirtAddr;
 
 pub struct IoApic {
     sel: *mut u32,
@@ -7,6 +7,7 @@ pub struct IoApic {
 }
 
 impl IoApic {
+    #[allow(unused)]
     pub unsafe fn new(addr: VirtAddr) -> Self {
         Self {
             sel: addr.as_mut_ptr(),
