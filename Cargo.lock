@@ -56,6 +56,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cc"
+version = "1.0.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "95e28fa049fda1c330bcf9d723be7663a899c4679724b34c81e9f5a326aab8cd"
+
+[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -191,6 +197,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "def50a86306165861203e7f84ecffbbdfdea79f0e51039b33de1e952358c47ac"
 
 [[package]]
+name = "raw-cpuid"
+version = "7.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4a349ca83373cfa5d6dbb66fd76e58b2cca08da71a5f6400de0a0a6a9bceeaf"
+dependencies = [
+ "bitflags",
+ "cc",
+ "rustc_version",
+]
+
+[[package]]
 name = "register"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -288,7 +305,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d44b0f30cb82b0fbc15b78ade1064226529ad52028bc8cb8accb98ff6f3d7131"
 dependencies = [
  "bitflags",
- "x86_64 0.9.5",
+ "x86_64 0.9.6",
 ]
 
 [[package]]
@@ -302,9 +319,9 @@ dependencies = [
 
 [[package]]
 name = "uefi"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36c63ddfef80d9e7f1318917f6c05135b3b98027e973a9e9f0a6aebe87b95934"
+checksum = "5cec6a2850639f588cc8042140b5deaa2f2170c23db5adb08f4316fa04cdb4a0"
 dependencies = [
  "bitflags",
  "log",
@@ -325,9 +342,9 @@ dependencies = [
 
 [[package]]
 name = "uefi-services"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "774bc7c01be05c9f325d08e51c9f6112515104f2089d3ceda6a764659418da48"
+checksum = "97be08ee1419b9fc2c8a3d863cced9775347e3c3c58a1c05eec483e349257edc"
 dependencies = [
  "log",
  "rlibc",
@@ -387,9 +404,9 @@ dependencies = [
 
 [[package]]
 name = "x86_64"
-version = "0.9.5"
+version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e6a3f047ad0844d3b4794f34d1095aefb918241064663d4163db8c7d4a76edf"
+checksum = "4206b60c9f99766329b66962aa8ddc01df6c7edd02edc046b7a69d5df9fcdbcf"
 dependencies = [
  "bit_field 0.9.0",
  "bitflags",
@@ -400,7 +417,7 @@ name = "xv7-boot"
 version = "0.1.0"
 dependencies = [
  "uefi",
- "x86_64 0.9.5",
+ "x86_64 0.9.6",
 ]
 
 [[package]]
@@ -412,7 +429,7 @@ dependencies = [
  "log",
  "uefi",
  "uefi-services",
- "x86_64 0.9.5",
+ "x86_64 0.9.6",
  "xv7-boot",
  "zeroize",
 ]
@@ -425,11 +442,12 @@ dependencies = [
  "cortex-a",
  "embedded-graphics",
  "lazy_static",
+ "raw-cpuid",
  "spin",
  "uart_16550",
  "uefi",
  "vte",
- "x86_64 0.9.5",
+ "x86_64 0.9.6",
  "xv7-boot",
 ]
 

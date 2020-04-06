@@ -6,6 +6,7 @@ pub use x86_64::instructions::interrupts::*;
 mod breakpoint;
 mod double_fault;
 mod page_fault;
+mod timer;
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {

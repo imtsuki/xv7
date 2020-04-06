@@ -1,3 +1,4 @@
+mod apic;
 pub mod config;
 mod gdt;
 pub mod interrupt;
