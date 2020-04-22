@@ -1,3 +1,4 @@
+use crate::arch::interrupt::without_interrupts;
 use core::fmt;
 use core::fmt::Write;
 
@@ -16,10 +17,12 @@ macro_rules! println {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
-    crate::console::CONSOLE_DRIVERS
-        .lock()
-        .write_fmt(args)
-        .unwrap();
+    without_interrupts(|| {
+        crate::console::CONSOLE_DRIVERS
+            .lock()
+            .write_fmt(args)
+            .unwrap();
+    })
 }
 
 /// Prints and returns the value of a given expression for quick and dirty
