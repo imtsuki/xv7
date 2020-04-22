@@ -21,6 +21,7 @@ x86_64 = "0.9.6"
 uart_16550 = "0.2.4"
 uefi = "0.4.4"
 cpuid =  { package = "raw-cpuid", version = "7.0.3", features = ["use_arch"] }
+pc-keyboard = "0.5.0"
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
 cortex-a = "2.9.0"

@@ -55,6 +55,18 @@ ${QEMU_X86_64} ${QEMU_X86_64_OPT} \
 '''
 ]
 
+[tasks.qemu-gdb]
+workspace = false
+dependencies = ["compose-esp"]
+script_runner = "@shell"
+script = [
+'''
+${QEMU_X86_64} ${QEMU_X86_64_OPT} \
+    -drive format=raw,file=fat:rw:${ESP} \
+    -S -gdb tcp::1234
+'''
+]
+
 [tasks.doc]
 workspace = false
 command = "cargo"

@@ -93,6 +93,10 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
 
     apic::lapic::init();
 
+    let mut ioapic = apic::IoApic::default();
+
+    ioapic.write_irq(1, 0, 0);
+
     interrupt::enable();
 
     crate::video::fun_things(args);

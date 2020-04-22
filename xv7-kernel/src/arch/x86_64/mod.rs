@@ -1,5 +1,6 @@
 pub mod apic;
 pub mod config;
+mod device;
 mod gdt;
 pub mod interrupt;
 mod paging;

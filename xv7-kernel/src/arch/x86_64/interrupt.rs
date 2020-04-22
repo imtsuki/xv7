@@ -6,6 +6,7 @@ pub use x86_64::instructions::interrupts::*;
 mod breakpoint;
 mod double_fault;
 mod general_protection_fault;
+mod keyboard;
 mod page_fault;
 mod timer;
 
@@ -24,6 +25,7 @@ lazy_static! {
                 .set_stack_index(super::gdt::DOUBLE_FAULT_IST_INDEX);
         }
         idt[0x20].set_handler_fn(timer::handler);
+        idt[0x21].set_handler_fn(keyboard::handler);
         idt
     };
 }

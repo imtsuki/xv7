@@ -27,15 +27,15 @@ impl IoApic {
         self.data.write_volatile(data);
     }
 
-    pub fn write_irq(&mut self, irq: u8, flags: u32, dest: u8) {
+    pub fn write_irq(&mut self, irq: u8, flags: u32, apic_id: u8) {
         unsafe {
             self.write(0x10 + 2 * irq, (0x20 + irq) as u32 | flags);
-            self.write(0x10 + 2 * irq + 1, (dest as u32) << 24);
+            self.write(0x10 + 2 * irq + 1, (apic_id as u32) << 24);
         }
     }
 
-    pub fn enable(&mut self, irq: u8, cpunum: u8) {
-        self.write_irq(irq, 0, cpunum);
+    pub fn enable(&mut self, irq: u8, apic_id: u8) {
+        self.write_irq(irq, 0, apic_id);
     }
 }
 
@@ -47,3 +47,5 @@ impl Default for IoApic {
         }
     }
 }
+
+pub const T_IRQ0: u32 = 0x20;
