@@ -2,7 +2,7 @@
 #![no_main]
 #![cfg_attr(doc, allow(unused_attributes))]
 #![feature(abi_efiapi)]
-#![feature(asm)]
+#![feature(llvm_asm)]
 #![feature(box_patterns)]
 #![feature(box_syntax)]
 #![feature(maybe_uninit_extra)]
@@ -113,7 +113,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
         MMAP_ITER.write(mmap_iter);
 
         KERNEL_ENTRY = kernel_entry;
-        asm!("mov $0, %rsp" : : "r"(KERNEL_STACK_TOP) : "memory" : "volatile");
+        llvm_asm!("mov $0, %rsp" : : "r"(KERNEL_STACK_TOP) : "memory" : "volatile");
         // NOTICE: after we changed rsp, all local variables are no longer avaliable
         // and we must call another function immediately
         call_kernel_entry();

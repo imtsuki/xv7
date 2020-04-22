@@ -1,6 +1,8 @@
 use crate::config::*;
 use x86_64::VirtAddr;
 
+pub const IOAPIC_BASE: u64 = 0xFEC0_0000;
+
 pub struct IoApic {
     sel: *mut u32,
     data: *mut u32,
@@ -36,8 +38,6 @@ impl IoApic {
         self.write_irq(irq, 0, cpunum);
     }
 }
-
-pub const IOAPIC_BASE: u64 = 0xFEC0_0000;
 
 impl Default for IoApic {
     fn default() -> Self {

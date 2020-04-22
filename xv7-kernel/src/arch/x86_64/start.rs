@@ -37,15 +37,17 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     paging::init_frame_allocator(args);
 
     // Test our frame allocator.
-    let frame = FRAME_ALLOCATOR.lock().allocate_frame();
-    dbg!(frame);
-    let frame = FRAME_ALLOCATOR.lock().allocate_frame();
-    dbg!(frame);
-    let frame = FRAME_ALLOCATOR.lock().allocate_frame();
+    {
+        let frame = FRAME_ALLOCATOR.lock().allocate_frame();
+        dbg!(frame);
+        let frame = FRAME_ALLOCATOR.lock().allocate_frame();
+        dbg!(frame);
+        let frame = FRAME_ALLOCATOR.lock().allocate_frame();
 
-    FRAME_ALLOCATOR.lock().deallocate_frame(frame.unwrap());
+        FRAME_ALLOCATOR.lock().deallocate_frame(frame.unwrap());
+    }
 
-    println!("{:b}", unsafe {
+    println!("{:x}", unsafe {
         x86_64::registers::model_specific::Msr::new(0x1b).read()
     });
 
@@ -68,10 +70,10 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     );
 
     cpuid.get_feature_info().as_ref().map_or_else(
-        || println!("Family: {}\nExtended Family: {}\nModel: {}\nExtended Model: {}\nStepping: {}\nBrand Index: {}", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a"),
+        || println!("Family: {}, Extended Family: {}, Model: {}, Extended Model: {}, Stepping: {}, Brand Index: {}", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a"),
         |finfo| {
             println!(
-                "Family: {}\nExtended Family: {}\nModel: {}\nExtended Model: {}\nStepping: {}\nBrand Index: {}",
+                "Family: {}, Extended Family: {}, Model: {}, Extended Model: {}, Stepping: {}, Brand Index: {}",
                 finfo.family_id(),
                 finfo.extended_family_id(),
                 finfo.model_id(),
@@ -82,17 +84,16 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
         },
     );
 
-    println!("IOAPIC Tests");
-
-    unsafe {
-        let mut apic = apic::IoApic::default();
-        println!("{:#x}", apic.read(0));
-        println!("{:#x}", apic.read(1));
-        apic.enable(0, 0);
-    }
-
     gdt::init();
     interrupt::init();
+
+    unsafe {
+        pic::disable_8259_pic();
+    }
+
+    apic::lapic::init();
+
+    interrupt::enable();
 
     crate::video::fun_things(args);
 

@@ -3,7 +3,7 @@
 #![cfg_attr(doc, allow(unused_attributes))]
 #![cfg_attr(target_arch = "x86_64", feature(abi_x86_interrupt))]
 #![feature(alloc_error_handler)]
-#![feature(asm)]
+#![feature(llvm_asm)]
 #![feature(box_syntax)]
 #![feature(box_patterns)]
 
@@ -14,7 +14,7 @@ mod macros;
 
 mod allocator;
 mod ansi;
-mod arch;
+pub mod arch;
 mod config;
 mod console;
 mod lang_item;
