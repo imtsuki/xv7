@@ -3,9 +3,9 @@
 #![cfg_attr(doc, allow(unused_attributes))]
 #![cfg_attr(target_arch = "x86_64", feature(abi_x86_interrupt))]
 #![feature(alloc_error_handler)]
-#![feature(llvm_asm)]
 #![feature(box_syntax)]
 #![feature(box_patterns)]
+#![feature(llvm_asm)]
 
 extern crate alloc;
 

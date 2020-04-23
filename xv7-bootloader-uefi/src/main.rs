@@ -2,9 +2,9 @@
 #![no_main]
 #![cfg_attr(doc, allow(unused_attributes))]
 #![feature(abi_efiapi)]
-#![feature(llvm_asm)]
 #![feature(box_patterns)]
 #![feature(box_syntax)]
+#![feature(llvm_asm)]
 #![feature(maybe_uninit_extra)]
 
 #[macro_use]

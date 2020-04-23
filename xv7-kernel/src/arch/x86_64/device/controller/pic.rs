@@ -1,7 +1,7 @@
 use x86_64::instructions::port::Port;
 
-pub static mut MASTER: Pic = Pic::new(0x20);
-pub static mut SLAVE: Pic = Pic::new(0xA0);
+static mut MASTER: Pic = Pic::new(0x20);
+static mut SLAVE: Pic = Pic::new(0xA0);
 
 pub unsafe fn disable_8259_pic() {
     MASTER.cmd.write(0x11);
