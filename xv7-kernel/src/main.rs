@@ -27,6 +27,3 @@ pub fn kmain() -> ! {
     println!("Now we are in kernel!");
     arch::idle();
 }
-
-#[global_allocator]
-static ALLOCATOR: allocator::Dummy = allocator::Dummy;

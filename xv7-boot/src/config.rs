@@ -18,10 +18,8 @@ pub const PAGE_OFFSET_BASE: u64 = 0xFFFF_8000_0000_0000;
 /// Base address where kernel is loaded. `.text` `.data` `.rodata` `.bss`
 pub const KERNEL_BASE: u64 = 0xFFFF_C000_0000_0000;
 /// Kernel heap.
-#[allow(unused)]
 pub const KERNEL_HEAP_BASE: u64 = 0xFFFF_D000_0000_0000;
 /// Size of kernel heap.
-#[allow(unused)]
 pub const KERNEL_HEAP_SIZE: usize = 128 * 1024;
 /// Top address of kernel stack.
 pub const KERNEL_STACK_TOP: u64 = 0xFFFF_E000_0000_0000;

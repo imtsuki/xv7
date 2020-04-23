@@ -14,6 +14,7 @@ tinybmp = { version = "0.2.2", features = [ "graphics" ]}
 bitvec = { version = "0.17.4", default-features = false, features = ["atomic"] }
 vte = "0.7.1"
 spin = "0.5.2"
+linked_list_allocator = "0.8.2"
 boot = { path = "../xv7-boot", package = "xv7-boot" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]

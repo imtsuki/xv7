@@ -1,7 +1,9 @@
-use crate::config::*;
 use lazy_static::lazy_static;
 use spin::Mutex;
 use x86_64::VirtAddr;
+
+use crate::arch::device::*;
+use crate::config::*;
 
 pub const LOCAL_APIC_BASE: u64 = 0xFEE0_0000;
 
@@ -28,10 +30,10 @@ impl LocalApic {
 
     pub fn init(&mut self) {
         unsafe {
-            self.write(LAPIC_SVR, 0x100 + 0xff);
+            self.write(LAPIC_SVR, 0x100 + (T_IRQ0 + IRQ_SPURIOUS) as u32);
 
             self.write(LAPIC_TDCR, X1); // Timer divided by 1
-            self.write(LAPIC_TIMER, PERIODIC | (T_IRQ0 + IRQ_TIMER));
+            self.write(LAPIC_TIMER, PERIODIC | (T_IRQ0 + IRQ_TIMER) as u32);
             self.write(LAPIC_TICR, 10000000);
 
             self.write(LAPIC_EOI, 0);
@@ -103,7 +105,5 @@ pub const LAPIC_TCCR: u32 = 0x0390;
 /// Divide Configuration (for Timer)
 pub const LAPIC_TDCR: u32 = 0x03e0;
 
-pub const T_IRQ0: u32 = 0x20;
-pub const IRQ_TIMER: u32 = 0;
 pub const X1: u32 = 0x0000000B;
 pub const PERIODIC: u32 = 0x00020000;

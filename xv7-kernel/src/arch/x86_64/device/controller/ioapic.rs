@@ -1,5 +1,6 @@
-use crate::config::*;
 use x86_64::VirtAddr;
+
+use crate::config::*;
 
 pub const IOAPIC_BASE: u64 = 0xFEC0_0000;
 
@@ -17,6 +18,7 @@ impl IoApic {
         }
     }
 
+    #[allow(unused)]
     pub unsafe fn read(&mut self, reg: u8) -> u32 {
         self.sel.write_volatile(reg as u32);
         self.data.read_volatile()
@@ -34,6 +36,7 @@ impl IoApic {
         }
     }
 
+    #[allow(unused)]
     pub fn enable(&mut self, irq: u8, apic_id: u8) {
         self.write_irq(irq, 0, apic_id);
     }
@@ -47,5 +50,3 @@ impl Default for IoApic {
         }
     }
 }
-
-pub const T_IRQ0: u32 = 0x20;

@@ -19,7 +19,7 @@ impl<'map> BitmapFrameAllocator<'map> {
         }
     }
 
-    pub fn insert_memory_region(&mut self, phys_start: PhysAddr, page_count: usize) {
+    pub fn install_memory_region(&mut self, phys_start: PhysAddr, page_count: usize) {
         assert!(phys_start.is_aligned(Size4KiB::SIZE));
         let frame_start = (phys_start.as_u64() / Size4KiB::SIZE) as usize;
         for i in frame_start..frame_start + page_count {

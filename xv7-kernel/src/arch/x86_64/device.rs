@@ -1,6 +1,6 @@
 use x86_64::structures::idt::InterruptDescriptorTable;
 
-mod controller;
+pub mod controller;
 
 mod keyboard;
 mod timer;
@@ -28,6 +28,7 @@ pub fn init() {
 }
 
 const T_IRQ0: u8 = 0x20;
+
 const IRQ_TIMER: u8 = 0;
 const IRQ_KEYBOARD: u8 = 1;
 const IRQ_COM1: u8 = 4;
