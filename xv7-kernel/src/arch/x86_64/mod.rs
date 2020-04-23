@@ -1,10 +1,9 @@
-pub mod apic;
 pub mod config;
-mod device;
+mod cpu;
+pub mod device;
 mod gdt;
 pub mod interrupt;
 mod paging;
-mod pic;
 mod start;
 
 #[inline(always)]

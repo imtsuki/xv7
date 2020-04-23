@@ -1,6 +1,6 @@
-use super::super::apic::lapic::LOCAL_APIC;
+use crate::arch::device::LOCAL_APIC;
 use x86_64::structures::idt::InterruptStackFrame;
 
 pub extern "x86-interrupt" fn handler(_stack_frame: &mut InterruptStackFrame) {
-    LOCAL_APIC.lock().eoi();
+    LOCAL_APIC.lock().end_of_interrupt();
 }

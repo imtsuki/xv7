@@ -1,3 +1,4 @@
+use crate::arch::device;
 use lazy_static::lazy_static;
 use x86_64::structures::idt::InterruptDescriptorTable;
 
@@ -6,9 +7,7 @@ pub use x86_64::instructions::interrupts::*;
 mod breakpoint;
 mod double_fault;
 mod general_protection_fault;
-mod keyboard;
 mod page_fault;
-mod timer;
 
 lazy_static! {
     static ref IDT: InterruptDescriptorTable = {
@@ -24,8 +23,7 @@ lazy_static! {
                 .set_handler_fn(double_fault::handler)
                 .set_stack_index(super::gdt::DOUBLE_FAULT_IST_INDEX);
         }
-        idt[0x20].set_handler_fn(timer::handler);
-        idt[0x21].set_handler_fn(keyboard::handler);
+        device::install_interrupt_handlers(&mut idt);
         idt
     };
 }

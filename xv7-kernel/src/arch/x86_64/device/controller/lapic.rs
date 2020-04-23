@@ -26,27 +26,24 @@ impl LocalApic {
         self.read(0x20);
     }
 
-    pub fn eoi(&mut self) {
+    pub fn init(&mut self) {
+        unsafe {
+            self.write(LAPIC_SVR, 0x100 + 0xff);
+
+            self.write(LAPIC_TDCR, X1); // Timer divided by 1
+            self.write(LAPIC_TIMER, PERIODIC | (T_IRQ0 + IRQ_TIMER));
+            self.write(LAPIC_TICR, 10000000);
+
+            self.write(LAPIC_EOI, 0);
+
+            self.write(LAPIC_TPR, 0);
+        }
+    }
+
+    pub fn end_of_interrupt(&mut self) {
         unsafe {
             self.write(LAPIC_EOI, 0);
         }
-    }
-}
-
-pub fn init() {
-    unsafe {
-        super::super::pic::disable_8259_pic();
-        let mut lapic = LOCAL_APIC.lock();
-
-        lapic.write(LAPIC_SVR, 0x100 + 0xff);
-
-        lapic.write(LAPIC_TDCR, X1); // Timer divided by 1
-        lapic.write(LAPIC_TIMER, PERIODIC | (T_IRQ0 + IRQ_TIMER));
-        lapic.write(LAPIC_TICR, 10000000);
-
-        lapic.write(LAPIC_EOI, 0);
-
-        lapic.write(LAPIC_TPR, 0);
     }
 }
 
@@ -54,6 +51,7 @@ lazy_static! {
     pub static ref LOCAL_APIC: Mutex<LocalApic> =
         Mutex::new(unsafe { LocalApic::new(VirtAddr::new(PAGE_OFFSET_BASE + LOCAL_APIC_BASE)) });
 }
+
 /// Local APIC ID
 pub const LAPIC_ID: u32 = 0x0020;
 /// Local APIC Version
