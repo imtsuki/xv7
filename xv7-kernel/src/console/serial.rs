@@ -39,8 +39,4 @@ impl Console for SerialConsole {
             self.0.send(c);
         }
     }
-
-    fn read(&mut self, _buf: &mut [u8]) -> usize {
-        todo!();
-    }
 }

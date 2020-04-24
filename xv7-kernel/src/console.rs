@@ -11,8 +11,6 @@ pub use serial::SerialConsole;
 /// A console device.
 pub trait Console {
     fn write(&mut self, buf: &[u8]);
-    /// FIXME: wrap `usize` in `Result<usize>`
-    fn read(&mut self, buf: &mut [u8]) -> usize;
 }
 
 pub struct ConsoleDrivers {

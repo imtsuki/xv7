@@ -33,10 +33,6 @@ impl Console for MonitorConsole {
             self.parser.advance(&mut self.performer, *byte);
         }
     }
-
-    fn read(&mut self, _buf: &mut [u8]) -> usize {
-        todo!();
-    }
 }
 
 impl Performer {
@@ -46,7 +42,7 @@ impl Performer {
 
         if line == 25 {
             if let Some(display) = &mut *GOP_DISPLAY.lock() {
-                display.move_upward(16);
+                display.scroll_up(16);
             }
             line = 24;
         }
@@ -72,7 +68,7 @@ impl Performer {
 
         if line == 25 {
             if let Some(display) = &mut *GOP_DISPLAY.lock() {
-                display.move_upward(16);
+                display.scroll_up(16);
             }
             line = 24;
         }
@@ -80,7 +76,7 @@ impl Performer {
     }
 }
 
-impl Perform for Performer {
+impl vte::Perform for Performer {
     fn print(&mut self, c: char) {
         if let Some(display) = &mut *GOP_DISPLAY.lock() {
             let (line, col) = self.pos;
@@ -103,7 +99,7 @@ impl Perform for Performer {
         match byte {
             C0::LF => self.linefeed(),
             C0::BS => self.backspace(),
-            _ => (),
+            _ => (/* TODO */),
         }
     }
 

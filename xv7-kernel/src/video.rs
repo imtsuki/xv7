@@ -37,7 +37,7 @@ impl DrawTarget<Rgb888> for GopDisplay {
 }
 
 impl GopDisplay {
-    pub fn move_upward(&mut self, distance: usize) {
+    pub fn scroll_up(&mut self, distance: usize) {
         unsafe {
             let base = (PAGE_OFFSET_BASE + self.0) as *mut u32;
             let (width, height) = self.1;
