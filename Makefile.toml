@@ -30,12 +30,14 @@ mkdir -p ${ESP}/EFI/xv7
 cp target/x86_64/debug/xv7-kernel ${ESP}/EFI/xv7/kernel
 rust-objdump \
     --disassemble \
-    --demangle \
     --source \
     --dynamic-reloc \
-    ${ESP}/EFI/xv7/kernel > ${ESP}/EFI/xv7/kernel.asm || true
+    ${ESP}/EFI/xv7/kernel | \
+    rustfilt > \
+    ${ESP}/EFI/xv7/kernel.asm || true
 '''
 ]
+
 
 [tasks.qemu]
 workspace = false
