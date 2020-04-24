@@ -26,6 +26,15 @@ You can use KVM to speed up emulation:
 cargo make qemu-kvm
 ```
 
+## Tips
+
+For better development experience, install these additional tools:
+
+```bash
+rustup component add llvm-tools-preview
+cargo install rustfilt
+```
+
 ## License
 
 This project is licensed under either of
