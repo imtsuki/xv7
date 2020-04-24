@@ -17,12 +17,14 @@ pub trait Console {
 
 pub struct ConsoleDrivers {
     serial: SerialConsole,
+    monitor: MonitorConsole,
 }
 
 impl ConsoleDrivers {
     pub fn new() -> Self {
         Self {
             serial: SerialConsole::new(serial::COM1),
+            monitor: MonitorConsole::new(),
         }
     }
 }
@@ -30,6 +32,7 @@ impl ConsoleDrivers {
 impl fmt::Write for ConsoleDrivers {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.serial.write(s.as_bytes());
+        self.monitor.write(s.as_bytes());
         Ok(())
     }
 }

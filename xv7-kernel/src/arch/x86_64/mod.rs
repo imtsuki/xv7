@@ -1,3 +1,4 @@
+pub mod allocator;
 pub mod config;
 mod cpu;
 pub mod device;

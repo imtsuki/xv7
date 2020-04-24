@@ -9,7 +9,7 @@ edition = "2018"
 
 [dependencies]
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-embedded-graphics = { version = "0.6.1" }
+embedded-graphics = { version = "0.6.2" }
 tinybmp = { version = "0.2.2", features = [ "graphics" ]}
 bitvec = { version = "0.17.4", default-features = false, features = ["atomic"] }
 vte = "0.7.1"

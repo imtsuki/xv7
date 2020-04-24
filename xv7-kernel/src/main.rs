@@ -13,7 +13,7 @@ extern crate alloc;
 mod macros;
 
 mod allocator;
-mod ansi;
+pub mod ansi;
 pub mod arch;
 mod config;
 mod console;

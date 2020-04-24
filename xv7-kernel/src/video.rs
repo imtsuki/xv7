@@ -2,7 +2,13 @@ use crate::config::PAGE_OFFSET_BASE;
 use boot::BootArgs;
 use embedded_graphics::{egtext, text_style};
 use embedded_graphics::{fonts::Font8x16, image::Image, pixelcolor::Rgb888, prelude::*};
+use lazy_static::lazy_static;
+use spin::Mutex;
 use tinybmp::Bmp;
+
+lazy_static! {
+    pub static ref GOP_DISPLAY: Mutex<Option<GopDisplay>> = Mutex::new(None);
+}
 
 pub struct GopDisplay(u64, (usize, usize));
 
@@ -30,32 +36,51 @@ impl DrawTarget<Rgb888> for GopDisplay {
     }
 }
 
-pub fn fun_things(args: &BootArgs) {
-    let mut display = GopDisplay(
+impl GopDisplay {
+    pub fn move_upward(&mut self, distance: usize) {
+        unsafe {
+            let base = (PAGE_OFFSET_BASE + self.0) as *mut u32;
+            let (width, height) = self.1;
+            for y in 0..height - distance {
+                let dst = base.add(y * width);
+                let src = base.add((y + distance) * width);
+                core::ptr::copy_nonoverlapping(src, dst, width);
+            }
+        }
+    }
+}
+
+pub fn init(args: &BootArgs) {
+    GOP_DISPLAY.lock().replace(GopDisplay(
         args.frame_buffer.base.as_u64(),
         args.frame_buffer.resolution,
-    );
+    ));
+}
 
-    display.clear(RgbColor::WHITE).unwrap();
+#[allow(unused)]
+pub fn fun_things() {
+    if let Some(display) = &mut *GOP_DISPLAY.lock() {
+        display.clear(RgbColor::WHITE).unwrap();
 
-    let img = Bmp::from_slice(include_bytes!("../resources/logo.bmp")).unwrap();
-    let logo = Image::new(&img, Point::zero());
+        let img = Bmp::from_slice(include_bytes!("../resources/logo.bmp")).unwrap();
+        let logo = Image::new(&img, Point::zero());
 
-    logo.translate(
-        (
-            (display.size().width - img.width()) as i32 / 2,
-            (display.size().height - img.height()) as i32 / 2,
+        logo.translate(
+            (
+                (display.size().width - img.width()) as i32 / 2,
+                (display.size().height - img.height()) as i32 / 2,
+            )
+                .into(),
         )
-            .into(),
-    )
-    .draw(&mut display)
-    .unwrap();
+        .draw(display)
+        .unwrap();
 
-    egtext!(
-        text = "XV7: Yet Another Operating System by imtsuki",
-        top_left = (100, 100),
-        style = text_style!(font = Font8x16, text_color = RgbColor::BLACK)
-    )
-    .draw(&mut display)
-    .unwrap();
+        egtext!(
+            text = "XV7: Yet Another Operating System by imtsuki",
+            top_left = (100, 100),
+            style = text_style!(font = Font8x16, text_color = RgbColor::BLACK)
+        )
+        .draw(display)
+        .unwrap();
+    }
 }

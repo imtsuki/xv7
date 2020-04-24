@@ -20,6 +20,8 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
         "BootArgs magic number check failed"
     );
 
+    crate::video::init(args);
+
     print!(
         "{}{}{}",
         CtrlSeq::EraseDisplay(Some(EraseParam::Entire)),
@@ -45,7 +47,7 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
 
     interrupt::enable();
 
-    crate::video::fun_things(args);
+    // crate::video::fun_things();
 
     crate::kmain();
 }
