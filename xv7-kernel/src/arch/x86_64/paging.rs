@@ -24,6 +24,4 @@ pub fn init_frame_allocator(args: &BootArgs) {
             );
         }
     }
-
-    allocator.print_statistics();
 }

@@ -1,5 +1,6 @@
 pub mod allocator;
 pub mod config;
+mod console;
 mod cpu;
 pub mod device;
 mod gdt;

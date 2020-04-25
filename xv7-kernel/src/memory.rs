@@ -27,6 +27,7 @@ impl<'map> BitmapFrameAllocator<'map> {
         }
     }
 
+    #[allow(unused)]
     pub fn print_statistics(&mut self) {
         println!(
             "BitmapFrameAllocator: bitmap occupies {}, maximum supported pyhsical memory: {}",
@@ -34,10 +35,12 @@ impl<'map> BitmapFrameAllocator<'map> {
             (self.inner.len() * Size4KiB::SIZE as usize).pretty(),
         );
 
+        let frames = self.inner.count_ones();
+
         println!(
             "BitmapFrameAllocator: {} frames available, which is {} of memory",
-            self.inner.count_ones(),
-            (self.inner.count_ones() * Size4KiB::SIZE as usize).pretty(),
+            frames,
+            (frames * Size4KiB::SIZE as usize).pretty(),
         );
     }
 }

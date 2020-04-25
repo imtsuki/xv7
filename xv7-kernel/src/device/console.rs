@@ -1,9 +1,8 @@
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 use core::fmt;
 use lazy_static::lazy_static;
 use spin::Mutex;
-
-use crate::arch::device::monitor_console::MonitorConsole;
-use crate::arch::device::serial_console::*;
 
 /// A console device.
 pub trait Console {
@@ -11,24 +10,26 @@ pub trait Console {
 }
 
 pub struct ConsoleDrivers {
-    serial: SerialConsole,
-    monitor: MonitorConsole,
-    // consoles: [&'a dyn Console; 4],
+    consoles: Vec<Box<dyn Console + Send>>,
 }
 
 impl ConsoleDrivers {
     pub fn new() -> Self {
         Self {
-            serial: SerialConsole::new(COM1),
-            monitor: MonitorConsole::new(),
+            consoles: Vec::new(),
         }
+    }
+
+    pub fn register(&mut self, console: Box<dyn Console + Send>) {
+        self.consoles.push(console)
     }
 }
 
 impl fmt::Write for ConsoleDrivers {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        self.serial.write(s.as_bytes());
-        self.monitor.write(s.as_bytes());
+        for console in &mut self.consoles {
+            console.write(s.as_bytes());
+        }
         Ok(())
     }
 }

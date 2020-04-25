@@ -1,5 +1,6 @@
 use x86_64::VirtAddr;
 
+use super::*;
 use crate::config::*;
 
 pub const IOAPIC_BASE: u64 = 0xFEC0_0000;
@@ -31,7 +32,7 @@ impl IoApic {
 
     pub fn write_irq(&mut self, irq: u8, flags: u32, apic_id: u8) {
         unsafe {
-            self.write(0x10 + 2 * irq, (0x20 + irq) as u32 | flags);
+            self.write(0x10 + 2 * irq, (T_IRQ0 + irq) as u32 | flags);
             self.write(0x10 + 2 * irq + 1, (apic_id as u32) << 24);
         }
     }

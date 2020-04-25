@@ -34,6 +34,17 @@ impl DrawTarget<Rgb888> for GopDisplay {
     fn size(&self) -> Size {
         Size::new((self.1).0 as u32, (self.1).1 as u32)
     }
+
+    fn clear(&mut self, _color: Rgb888) -> Result<(), ()> {
+        unsafe {
+            core::ptr::write_bytes(
+                (PAGE_OFFSET_BASE + self.0) as *mut u32,
+                0, /* FIXME: color? */
+                (self.1).0 * (self.1).1,
+            )
+        }
+        Ok(())
+    }
 }
 
 impl GopDisplay {
@@ -58,7 +69,7 @@ pub fn init(args: &BootArgs) {
 }
 
 #[allow(unused)]
-pub fn fun_things() {
+pub fn splash_screen() {
     if let Some(display) = &mut *GOP_DISPLAY.lock() {
         display.clear(RgbColor::WHITE).unwrap();
 

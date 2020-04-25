@@ -10,9 +10,9 @@ mod double_fault;
 mod general_protection_fault;
 mod page_fault;
 
+mod com;
 mod keyboard;
 mod timer;
-mod uart;
 
 use controller::*;
 
@@ -33,7 +33,7 @@ lazy_static! {
 
         idt[(T_IRQ0 + IRQ_TIMER) as usize].set_handler_fn(timer::handler);
         idt[(T_IRQ0 + IRQ_KEYBOARD) as usize].set_handler_fn(keyboard::handler);
-        idt[(T_IRQ0 + IRQ_COM1) as usize].set_handler_fn(uart::handler);
+        idt[(T_IRQ0 + IRQ_COM1) as usize].set_handler_fn(com::handler);
         idt
     };
 }
