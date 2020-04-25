@@ -76,7 +76,7 @@ impl fmt::Debug for MemoryMap {
 }
 
 /// `BootArgs` magic value.
-pub const BOOT_ARGS_MAGIC: u64 = 0xcafe_beef_dead_babe;
+pub const BOOT_ARGS_MAGIC: u64 = 0xcafe_beef;
 
 /// Represents a range of pyhsical memory.
 #[derive(Clone, Copy, Debug)]

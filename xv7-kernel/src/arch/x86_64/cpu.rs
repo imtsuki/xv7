@@ -24,7 +24,7 @@ pub fn init() {
     );
 
     cpuid.get_feature_info().as_ref().map_or_else(
-        || println!("Family: {}, Extended Family: {}, Model: {}, Extended Model: {}, Stepping: {}, Brand Index: {}", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a"),
+        || println!("Family: n/a, Extended Family: n/a, Model: n/a, Extended Model: n/a, Stepping: n/a, Brand Index: n/a"),
         |finfo| {
             println!(
                 "Family: {}, Extended Family: {}, Model: {}, Extended Model: {}, Stepping: {}, Brand Index: {}",
