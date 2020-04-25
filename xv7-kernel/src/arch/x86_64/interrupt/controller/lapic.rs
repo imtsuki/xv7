@@ -2,7 +2,7 @@ use lazy_static::lazy_static;
 use spin::Mutex;
 use x86_64::VirtAddr;
 
-use crate::arch::device::*;
+use super::*;
 use crate::config::*;
 
 pub const LOCAL_APIC_BASE: u64 = 0xFEE0_0000;

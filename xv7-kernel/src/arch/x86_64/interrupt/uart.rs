@@ -1,4 +1,4 @@
-use crate::arch::device::LOCAL_APIC;
+use super::controller::LOCAL_APIC;
 use x86_64::instructions::port::Port;
 use x86_64::structures::idt::InterruptStackFrame;
 

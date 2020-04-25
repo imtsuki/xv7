@@ -35,15 +35,15 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
 
     paging::init_frame_allocator(args);
 
+    crate::allocator::init_heap();
+
     cpu::init();
 
     gdt::init();
 
     interrupt::init();
 
-    device::init();
-
-    crate::allocator::init_heap();
+    interrupt::controller::init();
 
     interrupt::enable();
 

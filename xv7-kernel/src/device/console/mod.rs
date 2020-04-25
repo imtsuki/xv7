@@ -2,11 +2,8 @@ use core::fmt;
 use lazy_static::lazy_static;
 use spin::Mutex;
 
-pub mod monitor;
-pub mod serial;
-
-pub use monitor::MonitorConsole;
-pub use serial::SerialConsole;
+use crate::arch::device::monitor_console::MonitorConsole;
+use crate::arch::device::serial_console::*;
 
 /// A console device.
 pub trait Console {
@@ -16,12 +13,13 @@ pub trait Console {
 pub struct ConsoleDrivers {
     serial: SerialConsole,
     monitor: MonitorConsole,
+    // consoles: [&'a dyn Console; 4],
 }
 
 impl ConsoleDrivers {
     pub fn new() -> Self {
         Self {
-            serial: SerialConsole::new(serial::COM1),
+            serial: SerialConsole::new(COM1),
             monitor: MonitorConsole::new(),
         }
     }

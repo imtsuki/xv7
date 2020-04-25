@@ -1,6 +1,6 @@
-use super::Console;
 use crate::ansi;
 use crate::ansi::C0;
+use crate::device::console::Console;
 use crate::video::GOP_DISPLAY;
 use embedded_graphics::style::TextStyleBuilder;
 use embedded_graphics::{

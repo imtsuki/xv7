@@ -16,7 +16,7 @@ mod allocator;
 pub mod ansi;
 pub mod arch;
 mod config;
-mod console;
+pub mod device;
 mod lang_item;
 #[cfg(target_arch = "x86_64")]
 mod memory;

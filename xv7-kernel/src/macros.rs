@@ -18,7 +18,7 @@ macro_rules! println {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     without_interrupts(|| {
-        crate::console::CONSOLE_DRIVERS
+        crate::device::console::CONSOLE_DRIVERS
             .lock()
             .write_fmt(args)
             .unwrap();

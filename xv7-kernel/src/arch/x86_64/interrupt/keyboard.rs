@@ -1,4 +1,4 @@
-use crate::arch::device::LOCAL_APIC;
+use super::controller::LOCAL_APIC;
 use lazy_static::lazy_static;
 use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
 use spin::Mutex;
