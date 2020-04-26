@@ -1,10 +1,10 @@
 use super::controller::LOCAL_APIC;
-use crate::arch::device::com;
+use crate::arch::device::uart;
 use x86_64::structures::idt::InterruptStackFrame;
 
 pub extern "x86-interrupt" fn handler(_stack_frame: &mut InterruptStackFrame) {
     let byte = {
-        let mut port = com::COM1.lock();
+        let mut port = uart::COM1.lock();
         port.receive()
     };
 
