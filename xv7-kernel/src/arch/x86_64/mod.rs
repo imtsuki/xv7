@@ -7,6 +7,7 @@ mod gdt;
 pub mod interrupt;
 mod paging;
 mod start;
+pub mod syscall;
 
 #[inline(always)]
 pub fn idle() -> ! {

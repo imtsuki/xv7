@@ -3,13 +3,14 @@ use x86_64::instructions::segmentation::{load_ds, load_es, load_ss, set_cs};
 use x86_64::instructions::tables::load_tss;
 use x86_64::structures::gdt::*;
 use x86_64::structures::tss::TaskStateSegment;
+use x86_64::PrivilegeLevel;
 use x86_64::VirtAddr;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 pub const PAGE_FAULT_IST_INDEX: u16 = 1;
 
 lazy_static! {
-    static ref GDT: (GlobalDescriptorTable, Selectors) = {
+    pub static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
 
         let kernel_code = {
@@ -27,8 +28,34 @@ lazy_static! {
             Descriptor::UserSegment(flags.bits())
         };
 
+        let user_code = {
+            let flags = DescriptorFlags::USER_SEGMENT
+                | DescriptorFlags::PRESENT
+                | DescriptorFlags::EXECUTABLE
+                | DescriptorFlags::LONG_MODE
+                | DescriptorFlags::DPL_RING_3;
+            Descriptor::UserSegment(flags.bits())
+        };
+
+        let user_data = {
+            let flags = DescriptorFlags::USER_SEGMENT
+                | DescriptorFlags::PRESENT
+                | DescriptorFlags::WRITABLE
+                | DescriptorFlags::DPL_RING_3;
+            Descriptor::UserSegment(flags.bits())
+        };
+
+        // The order is required.
         let kernel_code_selector = gdt.add_entry(kernel_code);
+
         let kernel_data_selector = gdt.add_entry(kernel_data);
+
+        let mut user_data_selector = gdt.add_entry(user_data);
+        user_data_selector.set_rpl(PrivilegeLevel::Ring3);
+
+        let mut user_code_selector = gdt.add_entry(user_code);
+        user_code_selector.set_rpl(PrivilegeLevel::Ring3);
+
         let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
 
         (
@@ -36,6 +63,8 @@ lazy_static! {
             Selectors {
                 kernel_code_selector,
                 kernel_data_selector,
+                user_code_selector,
+                user_data_selector,
                 tss_selector,
             },
         )
@@ -60,10 +89,12 @@ lazy_static! {
     };
 }
 
-struct Selectors {
-    kernel_code_selector: SegmentSelector,
-    kernel_data_selector: SegmentSelector,
-    tss_selector: SegmentSelector,
+pub struct Selectors {
+    pub kernel_code_selector: SegmentSelector,
+    pub kernel_data_selector: SegmentSelector,
+    pub user_code_selector: SegmentSelector,
+    pub user_data_selector: SegmentSelector,
+    pub tss_selector: SegmentSelector,
 }
 
 pub fn init() {

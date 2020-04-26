@@ -46,6 +46,8 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
 
     interrupt::controller::init();
 
+    syscall::init();
+
     interrupt::enable();
 
     // crate::video::fun_things();
