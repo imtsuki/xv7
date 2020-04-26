@@ -1,8 +1,4 @@
 #![no_std]
 
-use core::panic::PanicInfo;
-
-#[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    loop {}
-}
+mod rt;
+pub mod syscall;
