@@ -38,7 +38,7 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
 
     dbg!(args);
 
-    cpu::init();
+    cpuid::init();
 
     gdt::init();
 

@@ -1,25 +1,21 @@
-use uart_16550::SerialPort;
-
+use crate::arch::device::com;
 use crate::device::console::Console;
 
 pub const COM1: u16 = 0x3f8;
 
-pub struct SerialConsole(SerialPort);
+pub struct SerialConsole;
 
 impl SerialConsole {
-    pub fn new(port: u16) -> Self {
-        Self({
-            let mut serial_port = unsafe { SerialPort::new(port) };
-            serial_port.init();
-            serial_port
-        })
+    pub fn new() -> Self {
+        Self
     }
 }
 
 impl Console for SerialConsole {
     fn write(&mut self, buf: &[u8]) {
+        let mut port = com::COM1.lock();
         for &c in buf {
-            self.0.send(c);
+            port.send(c);
         }
     }
 }

@@ -1,21 +1,21 @@
 use super::controller::LOCAL_APIC;
-use x86_64::instructions::port::Port;
+use crate::arch::device::com;
 use x86_64::structures::idt::InterruptStackFrame;
 
-const COM1: u16 = 0x3f8;
-
 pub extern "x86-interrupt" fn handler(_stack_frame: &mut InterruptStackFrame) {
-    let mut data_port = Port::<u8>::new(COM1);
-    let mut line_sts_port = Port::<u8>::new(COM1 + 5);
-
-    while unsafe { line_sts_port.read() } & 0x01 == 0 {}
-    let mut byte = unsafe { data_port.read() } as char;
+    let byte = {
+        let mut port = com::COM1.lock();
+        port.receive()
+    };
 
     // http://web.mit.edu/broder/Public/fixing-jos-serial.txt
-    byte = if byte == '\r' { '\n' } else { byte };
-    byte = if byte == '\x7f' { '\x08' } else { byte };
+    let byte = match byte {
+        b'\r' => b'\n',
+        b'\x7f' => b'\x08',
+        _ => byte,
+    };
 
-    print!("{}", byte);
+    print!("{}", byte as char);
 
     LOCAL_APIC.lock().end_of_interrupt();
 }

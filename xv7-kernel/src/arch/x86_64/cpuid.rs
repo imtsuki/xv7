@@ -1,4 +1,4 @@
-use cpuid::CpuId;
+use raw_cpuid::CpuId;
 
 pub fn init() {
     println!("{:x}", unsafe {
@@ -8,7 +8,7 @@ pub fn init() {
     let cpuid = CpuId::new();
 
     println!(
-        "Vendor: {}",
+        "CPU Vendor: {}",
         cpuid
             .get_vendor_info()
             .as_ref()

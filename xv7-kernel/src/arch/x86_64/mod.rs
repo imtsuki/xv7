@@ -1,7 +1,7 @@
 pub mod allocator;
 pub mod config;
 mod console;
-mod cpu;
+mod cpuid;
 pub mod device;
 mod gdt;
 pub mod interrupt;
