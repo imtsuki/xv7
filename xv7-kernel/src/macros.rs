@@ -37,7 +37,7 @@ macro_rules! dbg {
     ($val:expr) => {
         match $val {
             tmp => {
-                $crate::println!("[{}:{}] {} = {:x?}",
+                $crate::println!("[{}:{}] {} = {:?}",
                     file!(), line!(), stringify!($val), &tmp);
                 tmp
             }
