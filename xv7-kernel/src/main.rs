@@ -6,6 +6,7 @@
 #![feature(box_syntax)]
 #![feature(box_patterns)]
 #![feature(llvm_asm)]
+#![feature(naked_functions)]
 
 extern crate alloc;
 
