@@ -71,6 +71,13 @@ lazy_static! {
     };
     pub static ref TSS: TaskStateSegment = {
         let mut tss = TaskStateSegment::new();
+        tss.privilege_stack_table[0] = {
+            const STACK_SIZE: usize = 4096;
+            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+
+            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
+            stack_start + STACK_SIZE
+        };
         tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
             const STACK_SIZE: usize = 4096;
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];

@@ -1,4 +1,5 @@
 use super::gdt;
+use super::macros::SyscallStackFrame;
 use x86_64::registers::model_specific::{Efer, EferFlags, KernelGsBase, LStar, SFMask, Star};
 use x86_64::registers::rflags::RFlags;
 use x86_64::VirtAddr;
@@ -10,11 +11,11 @@ pub unsafe extern "C" fn syscall_entry() {
         swapgs              // Load kernel TSS pointer
         movq %rsp, %gs:28   // Save userspace %rsp
         movq %gs:4, %rsp    // Load TSS %rsp
-        pushq 3 * 8 + 3     // Push userspace data segment
+        pushq $$0x1b        // Push userspace data segment
         pushq %gs:28        // Push userspace %rsp
         movq $$0, %gs:28    // Clear userspace %rsp
         pushq %r11          // Push rflags
-        pushq 4 * 8 + 3     // Push userspace code segment
+        pushq $$0x23        // Push userspace code segment
         pushq %rcx          // Push userspace return pointer
         swapgs              // Restore %gs
     " : : : : "volatile"
@@ -23,10 +24,23 @@ pub unsafe extern "C" fn syscall_entry() {
     scratch_push!();
     preserved_push!();
 
+    // FIXME: overrides stack.preserved.r15?
+    let rsp: usize;
+    llvm_asm!("" : "={rsp}"(rsp) : : : "volatile");
+
+    syscall_inner(rsp as *mut SyscallStackFrame);
+
     preserved_pop!();
     scratch_pop!();
 
     interrupt_return!();
+}
+
+fn syscall_inner(stack: *mut SyscallStackFrame) {
+    println!("Ready to go back to userspace and trigger a #PF...");
+    unsafe {
+        println!("{:x}", &(*stack).iret.rip);
+    }
 }
 
 pub fn init() {
@@ -60,9 +74,13 @@ pub fn init() {
         Efer::update(|efer| efer.insert(EferFlags::SYSTEM_CALL_EXTENSIONS));
     }
 
+    dbg!(&*gdt::TSS);
+
     dbg!(Efer::read());
     dbg!(Star::read());
     dbg!(LStar::read());
     dbg!(SFMask::read());
     dbg!(KernelGsBase::read());
+
+    unsafe { syscall_entry() };
 }
