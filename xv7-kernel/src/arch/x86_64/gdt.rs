@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use x86_64::instructions::segmentation::{load_ds, load_es, load_ss, set_cs};
+use x86_64::instructions::segmentation::{load_ds, load_es, load_gs, load_ss, set_cs};
 use x86_64::instructions::tables::load_tss;
 use x86_64::structures::gdt::*;
 use x86_64::structures::tss::TaskStateSegment;
@@ -69,7 +69,7 @@ lazy_static! {
             },
         )
     };
-    static ref TSS: TaskStateSegment = {
+    pub static ref TSS: TaskStateSegment = {
         let mut tss = TaskStateSegment::new();
         tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
             const STACK_SIZE: usize = 4096;
@@ -100,10 +100,10 @@ pub struct Selectors {
 pub fn init() {
     GDT.0.load();
     unsafe {
-        // Load %ss, %ds, %es
         load_ss(GDT.1.kernel_data_selector);
         load_ds(GDT.1.kernel_data_selector);
         load_es(GDT.1.kernel_data_selector);
+        load_gs(GDT.1.kernel_data_selector);
 
         set_cs(GDT.1.kernel_code_selector);
         load_tss(GDT.1.tss_selector);

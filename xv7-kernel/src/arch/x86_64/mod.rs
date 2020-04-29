@@ -1,3 +1,6 @@
+#[macro_use]
+mod macros;
+
 pub mod allocator;
 pub mod config;
 mod console;

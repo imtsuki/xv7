@@ -1,20 +1,41 @@
-use super::gdt::GDT;
-use x86_64::registers::model_specific::{Efer, EferFlags, LStar, SFMask, Star};
+use super::gdt;
+use x86_64::registers::model_specific::{Efer, EferFlags, KernelGsBase, LStar, SFMask, Star};
 use x86_64::registers::rflags::RFlags;
 use x86_64::VirtAddr;
 
 #[naked]
 pub unsafe extern "C" fn syscall_entry() {
-    /* TODO */
+    llvm_asm!(
+    "
+        swapgs              // Load kernel TSS pointer
+        movq %rsp, %gs:28   // Save userspace %rsp
+        movq %gs:4, %rsp    // Load TSS %rsp
+        pushq 3 * 8 + 3     // Push userspace data segment
+        pushq %gs:28        // Push userspace %rsp
+        movq $$0, %gs:28    // Clear userspace %rsp
+        pushq %r11          // Push rflags
+        pushq 4 * 8 + 3     // Push userspace code segment
+        pushq %rcx          // Push userspace return pointer
+        swapgs              // Restore %gs
+    " : : : : "volatile"
+    );
+
+    scratch_push!();
+    preserved_push!();
+
+    preserved_pop!();
+    scratch_pop!();
+
+    interrupt_return!();
 }
 
 pub fn init() {
     // Setup syscall/sysret cs/ss
     Star::write(
-        GDT.1.user_code_selector,
-        GDT.1.user_data_selector,
-        GDT.1.kernel_code_selector,
-        GDT.1.kernel_data_selector,
+        gdt::GDT.1.user_code_selector,
+        gdt::GDT.1.user_data_selector,
+        gdt::GDT.1.kernel_code_selector,
+        gdt::GDT.1.kernel_data_selector,
     )
     .unwrap();
 
@@ -32,6 +53,8 @@ pub fn init() {
 
     SFMask::write(mask);
 
+    KernelGsBase::write(VirtAddr::from_ptr(&*gdt::TSS as *const _));
+
     // Enable syscall extensions
     unsafe {
         Efer::update(|efer| efer.insert(EferFlags::SYSTEM_CALL_EXTENSIONS));
@@ -41,4 +64,5 @@ pub fn init() {
     dbg!(Star::read());
     dbg!(LStar::read());
     dbg!(SFMask::read());
+    dbg!(KernelGsBase::read());
 }
