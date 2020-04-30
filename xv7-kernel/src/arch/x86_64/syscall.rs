@@ -82,5 +82,5 @@ pub fn init() {
     dbg!(SFMask::read());
     dbg!(KernelGsBase::read());
 
-    unsafe { syscall_entry() };
+    unsafe { llvm_asm!("syscall") };
 }
