@@ -4,7 +4,7 @@ use x86_64::registers::control::{Cr3, Cr3Flags, Cr4, Cr4Flags};
 use x86_64::registers::model_specific::{Efer, EferFlags};
 use x86_64::structures::paging::{
     FrameAllocator, Mapper, Page, PageSize, PageTable, PageTableFlags, PhysFrame,
-    RecursivePageTable, Size2MiB, Size4KiB, UnusedPhysFrame,
+    RecursivePageTable, Size2MiB, Size4KiB,
 };
 use x86_64::{align_up, PhysAddr, VirtAddr};
 
@@ -22,14 +22,14 @@ impl<'a> KernelFrameAllocator<'a> {
 }
 
 unsafe impl<'a> FrameAllocator<Size4KiB> for KernelFrameAllocator<'a> {
-    fn allocate_frame(&mut self) -> Option<UnusedPhysFrame<Size4KiB>> {
+    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
         let phys_addr = self
             .0
             .allocate_pages(AllocateType::AnyPages, MemoryType(MEMORY_TYPE_KERNEL), 1)
             .expect_success("Failed to allocate physical frame");
         let phys_addr = PhysAddr::new(phys_addr);
         let phys_frame = PhysFrame::containing_address(phys_addr);
-        Some(unsafe { UnusedPhysFrame::new(phys_frame) })
+        Some(phys_frame)
     }
 }
 
@@ -41,7 +41,7 @@ pub fn init_recursive(
     // has memory type `BOOT_SERVICES_DATA`. Level 3 ~ level 1 tables will
     // be discarded eventually so we can ignore them.
     let old_l4_table_addr = Cr3::read().0.start_address().as_u64();
-    let l4_table_frame = allocator.allocate_frame().unwrap().frame();
+    let l4_table_frame = allocator.allocate_frame().unwrap();
     let l4_table_addr = l4_table_frame.start_address().as_u64();
 
     // Safety: newly allocated frame is guaranteed to be valid and unused
@@ -95,16 +95,17 @@ pub fn map_physical_memory(
     let end_frame = PhysFrame::containing_address(max_addr);
     for frame in PhysFrame::range_inclusive(start_frame, end_frame) {
         let page = Page::containing_address(offset + frame.start_address().as_u64());
-        let frame = unsafe { UnusedPhysFrame::new(frame) };
-        page_table
-            .map_to(
-                page,
-                frame,
-                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
-                allocator,
-            )
-            .expect("Error occured while mapping complete pyhsical memory")
-            .flush();
+        unsafe {
+            page_table
+                .map_to(
+                    page,
+                    frame,
+                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
+                    allocator,
+                )
+                .expect("Error occured while mapping complete pyhsical memory")
+                .flush();
+        }
     }
 }
 
@@ -120,14 +121,16 @@ pub fn map_stack(
     let stack_bottom = stack_top - page_count;
     for page in Page::range(stack_bottom, stack_top) {
         let frame = allocator.allocate_frame().unwrap();
-        page_table
-            .map_to(
-                page,
-                frame,
-                PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
-                allocator,
-            )
-            .expect("Error occured while mapping kernel stack")
-            .flush();
+        unsafe {
+            page_table
+                .map_to(
+                    page,
+                    frame,
+                    PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
+                    allocator,
+                )
+                .expect("Error occured while mapping kernel stack")
+                .flush();
+        }
     }
 }

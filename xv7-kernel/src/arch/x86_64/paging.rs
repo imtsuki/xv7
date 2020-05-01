@@ -25,3 +25,8 @@ pub fn init_frame_allocator(args: &BootArgs) {
         }
     }
 }
+
+#[allow(unused)]
+pub unsafe fn active_page_table() -> &'static mut PageTable {
+    &mut *(0xFFFF_FFFF_FFFF_F000 as *mut PageTable)
+}

@@ -39,7 +39,7 @@ pub unsafe extern "C" fn syscall_entry() {
 fn syscall_inner(stack: *mut SyscallStackFrame) {
     println!("Ready to go back to userspace and trigger a #PF...");
     unsafe {
-        println!("{:x}", &(*stack).iret.rip);
+        println!("syscall return address: {:x}", &(*stack).iret.rip);
     }
 }
 

@@ -22,6 +22,7 @@ mod lang_item;
 #[cfg(target_arch = "x86_64")]
 mod memory;
 mod pretty;
+pub mod process;
 pub mod syscall;
 mod video;
 

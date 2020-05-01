@@ -7,9 +7,7 @@ use goblin::elf::reloc::*;
 use uefi::prelude::*;
 use uefi::table::boot::{AllocateType, MemoryType};
 use x86_64::structures::paging::FrameAllocator;
-use x86_64::structures::paging::{
-    Mapper, Page, PageSize, PageTableFlags, PhysFrame, Size4KiB, UnusedPhysFrame,
-};
+use x86_64::structures::paging::{Mapper, Page, PageSize, PageTableFlags, PhysFrame, Size4KiB};
 use x86_64::{align_up, PhysAddr, VirtAddr};
 use zeroize::Zeroize;
 
@@ -78,11 +76,12 @@ pub fn load_elf(
                 let page = Page::containing_address(
                     VirtAddr::new(ph.p_vaddr + i as u64 * Size4KiB::SIZE) + KERNEL_BASE,
                 );
-                let frame = unsafe { UnusedPhysFrame::new(frame) };
-                page_table
-                    .map_to(page, frame, flags, allocator)
-                    .expect("Failed to map kernel segment")
-                    .flush();
+                unsafe {
+                    page_table
+                        .map_to(page, frame, flags, allocator)
+                        .expect("Failed to map kernel segment")
+                        .flush();
+                }
             }
         }
     }

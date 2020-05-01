@@ -22,10 +22,12 @@ pub fn init_heap() {
     for page in page_range {
         let frame = frame_allocator.allocate_frame().unwrap();
         let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE;
-        mapper
-            .map_to(page, frame, flags, &mut *frame_allocator)
-            .unwrap()
-            .flush();
+        unsafe {
+            mapper
+                .map_to(page, frame, flags, &mut *frame_allocator)
+                .unwrap()
+                .flush();
+        }
     }
 
     unsafe {

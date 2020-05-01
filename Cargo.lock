@@ -452,11 +452,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "x86_64"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6014ddb75b4f90f5bd2d067dbbd76ed093335b52d14365906801e9d63a69d82b"
+dependencies = [
+ "bit_field 0.9.0",
+ "bitflags",
+]
+
+[[package]]
 name = "xv7-boot"
 version = "0.1.0"
 dependencies = [
  "uefi",
- "x86_64 0.9.6",
+ "x86_64 0.10.1",
 ]
 
 [[package]]
@@ -468,7 +478,7 @@ dependencies = [
  "log",
  "uefi",
  "uefi-services",
- "x86_64 0.9.6",
+ "x86_64 0.10.1",
  "xv7-boot",
  "zeroize",
 ]
@@ -489,7 +499,7 @@ dependencies = [
  "uart_16550",
  "uefi",
  "vte",
- "x86_64 0.9.6",
+ "x86_64 0.10.1",
  "xv7-boot",
 ]
 

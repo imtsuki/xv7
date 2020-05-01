@@ -35,7 +35,7 @@ use x86_64::{
 
 use config::*;
 
-static mut KERNEL_ENTRY: KernelEntry = KernelEntry(VirtAddr::new_unchecked(0x0));
+static mut KERNEL_ENTRY: KernelEntry = KernelEntry(VirtAddr::new_truncate(0x0));
 static mut FRAME_BUFFER_BASE: u64 = 0x0;
 static mut FRAME_BUFFER_LEN: usize = 0x0;
 static mut RESOLUTION: (usize, usize) = (0, 0);

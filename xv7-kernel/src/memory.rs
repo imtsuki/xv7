@@ -4,7 +4,7 @@ use bitvec::prelude::*;
 use boot::PhysAddr;
 use lazy_static::lazy_static;
 use spin::Mutex;
-pub use x86_64::structures::paging::{FrameAllocator, FrameDeallocator, UnusedPhysFrame};
+pub use x86_64::structures::paging::{FrameAllocator, FrameDeallocator};
 use x86_64::structures::paging::{PageSize, PhysFrame, Size4KiB};
 
 pub struct BitmapFrameAllocator<'map> {
@@ -46,18 +46,17 @@ impl<'map> BitmapFrameAllocator<'map> {
 }
 
 unsafe impl<'map> FrameAllocator<Size4KiB> for BitmapFrameAllocator<'map> {
-    fn allocate_frame(&mut self) -> Option<UnusedPhysFrame<Size4KiB>> {
+    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
         let frame = self
             .inner
             .iter()
             .enumerate()
             .filter_map(|(index, unused)| {
                 if *unused {
-                    Some((index, unsafe {
-                        UnusedPhysFrame::new(PhysFrame::containing_address(PhysAddr::new(
-                            index as u64 * Size4KiB::SIZE,
-                        )))
-                    }))
+                    Some((
+                        index,
+                        PhysFrame::containing_address(PhysAddr::new(index as u64 * Size4KiB::SIZE)),
+                    ))
                 } else {
                     None
                 }
@@ -74,8 +73,8 @@ unsafe impl<'map> FrameAllocator<Size4KiB> for BitmapFrameAllocator<'map> {
 }
 
 impl<'map> FrameDeallocator<Size4KiB> for BitmapFrameAllocator<'map> {
-    fn deallocate_frame(&mut self, frame: UnusedPhysFrame<Size4KiB>) {
-        let index = frame.frame().start_address().as_u64() / Size4KiB::SIZE;
+    unsafe fn deallocate_frame(&mut self, frame: PhysFrame<Size4KiB>) {
+        let index = frame.start_address().as_u64() / Size4KiB::SIZE;
         self.inner.set(index as usize, true);
     }
 }
