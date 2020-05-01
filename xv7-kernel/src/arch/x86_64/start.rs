@@ -1,5 +1,4 @@
 use super::*;
-use crate::ansi::{CtrlSeq, EraseParam};
 use boot::{BootArgs, KernelEntryFn, BOOT_ARGS_MAGIC};
 
 #[used]
@@ -28,13 +27,6 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
 
     // We wanna see outputs
     console::init();
-
-    print!(
-        "{}{}{}",
-        CtrlSeq::EraseDisplay(Some(EraseParam::Entire)),
-        CtrlSeq::CursorPosition(None, None),
-        CtrlSeq::SelectGraphicRendition(None),
-    );
 
     dbg!(args);
 
