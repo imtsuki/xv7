@@ -1,15 +1,16 @@
+use super::paging;
 use crate::{
     config::*,
     memory::{FrameAllocator, FRAME_ALLOCATOR},
 };
 use x86_64::structures::paging::{Mapper, Page};
-use x86_64::structures::paging::{PageTable, PageTableFlags, RecursivePageTable};
+use x86_64::structures::paging::{OffsetPageTable, PageTableFlags};
 use x86_64::VirtAddr;
 
 pub fn init_heap() {
     let mut frame_allocator = FRAME_ALLOCATOR.lock();
-    let page_table = unsafe { &mut *(0xFFFF_FFFF_FFFF_F000 as *mut PageTable) };
-    let mut mapper = RecursivePageTable::new(page_table).unwrap();
+    let page_table = unsafe { paging::active_page_table() };
+    let mut mapper = unsafe { OffsetPageTable::new(page_table, VirtAddr::new(PAGE_OFFSET_BASE)) };
 
     let page_range = {
         let heap_start = VirtAddr::new(KERNEL_HEAP_BASE as u64);
