@@ -1,5 +1,5 @@
 [env]
-CARGO_MAKE_WORKSPACE_SKIP_MEMBERS = "xv7-boot"
+CARGO_MAKE_WORKSPACE_SKIP_MEMBERS = "xv7-boot;xv7-usyscall"
 ESP = "target/esp"
 QEMU_X86_64 = "qemu-system-x86_64"
 QEMU_X86_64_OPT = '''

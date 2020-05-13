@@ -1,5 +1,5 @@
 [package]
-name = "xv7-syscall"
+name = "xv7-usyscall"
 version = "0.1.0"
 authors = ["imtsuki <me@qjx.app>"]
 edition = "2018"

@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "xv7-syscall",
+    "xv7-usyscall",
     "xv7-user",
     "xv7-kernel",
     "xv7-boot",

@@ -2,4 +2,4 @@
 #![feature(llvm_asm)]
 
 mod rt;
-pub use xv7_syscall::*;
+pub use usyscall::*;
