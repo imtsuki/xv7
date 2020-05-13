@@ -4,19 +4,20 @@ on: [push]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Install latest nightly rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly
-        override: true
-    - name: Install rust-src
-      run: rustup component add rust-src
-    - name: Install cargo-make
-      run: cargo install cargo-make
-    - name: Build
-      run: cargo make xbuild
+      - uses: actions/checkout@v1
+      - name: Install latest nightly rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: Install rust-src
+        run: rustup component add rust-src
+      - name: Install cargo-make
+        run: cargo install cargo-make
+      - name: Install old cargo-xbuild
+        run: cargo install cargo-xbuild --version 0.5.29
+      - name: Build
+        run: cargo make xbuild
