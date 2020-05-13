@@ -32,8 +32,8 @@ pub struct IretRegisters {
 
 #[repr(packed)]
 pub struct SyscallStackFrame {
-    pub preserved: PreservedRegisters,
     pub scratch: ScratchRegisters,
+    pub preserved: PreservedRegisters,
     pub iret: IretRegisters,
 }
 

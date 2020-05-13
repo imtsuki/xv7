@@ -17,16 +17,21 @@ mod allocator;
 pub mod ansi;
 pub mod arch;
 mod config;
+pub mod cpu;
 pub mod device;
 mod lang_item;
 #[cfg(target_arch = "x86_64")]
 mod memory;
 mod pretty;
 pub mod process;
+pub mod scheduler;
 pub mod syscall;
 mod video;
 
+pub use crate::arch::context;
+pub use crate::arch::paging;
+
 pub fn kmain() -> ! {
-    println!("Now we are in kernel!");
-    arch::idle();
+    println!("We are alive!");
+    scheduler::scheduler();
 }

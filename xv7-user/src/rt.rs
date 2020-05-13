@@ -1,7 +1,8 @@
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(_info: &core::panic::PanicInfo) -> ! {
-    crate::syscall::exit(-1);
+    loop { /* FIXME */ }
+    // crate::syscall::exit(-1);
 }
 
 #[no_mangle]

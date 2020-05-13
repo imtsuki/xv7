@@ -4,11 +4,12 @@ mod macros;
 pub mod allocator;
 pub mod config;
 mod console;
+pub mod context;
 mod cpuid;
 pub mod device;
-mod gdt;
+pub mod gdt;
 pub mod interrupt;
-mod paging;
+pub mod paging;
 mod start;
 pub mod syscall;
 

@@ -7,3 +7,7 @@ pub fn exit(code: isize) -> ! {
     }
     unreachable!()
 }
+
+pub fn hello(code: usize) -> usize {
+    unsafe { syscall1(SYS_HELLO, code) }
+}

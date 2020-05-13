@@ -21,26 +21,32 @@ pub unsafe extern "C" fn syscall_entry() {
     " : : : : "volatile"
     );
 
-    scratch_push!();
     preserved_push!();
+    scratch_push!();
 
-    // FIXME: overrides stack.preserved.r15?
+    // FIXME: overrides stack.scratch.rcx?
     let rsp: usize;
     llvm_asm!("" : "={rsp}"(rsp) : : : "volatile");
 
     syscall_inner(rsp as *mut SyscallStackFrame);
 
-    preserved_pop!();
     scratch_pop!();
+    preserved_pop!();
 
     interrupt_return!();
 }
 
 fn syscall_inner(stack: *mut SyscallStackFrame) {
-    println!("Ready to go back to userspace and trigger a #PF...");
-    unsafe {
-        println!("syscall return address: {:x}", &(*stack).iret.rip);
-    }
+    let stack = unsafe { &mut *stack };
+    let scratch = &stack.scratch;
+    stack.scratch.rax = crate::syscall::syscall(
+        scratch.rax,
+        scratch.rdi,
+        scratch.rsi,
+        scratch.rdx,
+        scratch.r10,
+        scratch.r8,
+    );
 }
 
 pub fn init() {
@@ -81,6 +87,4 @@ pub fn init() {
     dbg!(LStar::read());
     dbg!(SFMask::read());
     dbg!(KernelGsBase::read());
-
-    unsafe { llvm_asm!("syscall") };
 }

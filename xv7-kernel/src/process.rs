@@ -1,4 +1,13 @@
-pub struct Context;
+use crate::context::Context;
+use crate::cpu::my_cpu;
+use crate::paging::VirtAddr;
+use crate::{
+    config::*,
+    memory::{FrameAllocator, FRAME_ALLOCATOR},
+};
+use core::sync::atomic::{AtomicU64, Ordering};
+use x86_64::registers::control::Cr3;
+use x86_64::structures::idt::InterruptStackFrameValue;
 
 pub enum ProcessState {
     Spawn,
@@ -7,8 +16,75 @@ pub enum ProcessState {
     Zombie,
 }
 
+static NEXT_PID: AtomicU64 = AtomicU64::new(0);
+
 pub struct Process {
     pub pid: u64,
     pub context: Context,
     pub state: ProcessState,
+    pub kstack: VirtAddr,
+}
+
+impl Process {
+    pub fn new() -> Process {
+        let kstack = {
+            let frame = FRAME_ALLOCATOR.lock().allocate_frame().unwrap();
+            VirtAddr::new(frame.start_address().as_u64() + PAGE_OFFSET_BASE)
+        };
+
+        let stack_pointer =
+            kstack + 4096usize - core::mem::size_of::<InterruptStackFrameValue>() - 8usize;
+
+        let mut context = Context::user(stack_pointer);
+
+        let (frame, _) = Cr3::read();
+
+        context.cr3 = frame.start_address().as_u64() as usize;
+
+        unsafe {
+            stack_pointer
+                .as_mut_ptr::<u64>()
+                .write(interrupt_return as *const u8 as u64);
+        };
+
+        Process {
+            pid: NEXT_PID.fetch_add(1, Ordering::Relaxed),
+            context,
+            state: ProcessState::Spawn,
+            kstack,
+        }
+    }
+
+    pub fn intr_stack_frame(&self) -> &mut InterruptStackFrameValue {
+        unsafe {
+            &mut *((self.kstack.as_u64() + 4096
+                - core::mem::size_of::<InterruptStackFrameValue>() as u64)
+                as *mut InterruptStackFrameValue)
+        }
+    }
+
+    pub fn set_userspace_return_address(
+        &self,
+        instruction_pointer: VirtAddr,
+        stack_pointer: VirtAddr,
+    ) {
+        self.intr_stack_frame().instruction_pointer = instruction_pointer;
+        self.intr_stack_frame().stack_pointer = stack_pointer;
+        // FIXME: magic number
+        self.intr_stack_frame().code_segment = 0x23;
+        self.intr_stack_frame().stack_segment = 0x1b;
+        self.intr_stack_frame().cpu_flags = 0x282;
+    }
+}
+
+#[naked]
+unsafe fn interrupt_return() {
+    llvm_asm!(
+        "iretq": : : : "volatile"
+    )
+}
+
+pub fn my_proc() -> &'static mut Process {
+    let cpu = my_cpu();
+    cpu.current_process.as_mut().unwrap()
 }

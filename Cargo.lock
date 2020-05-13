@@ -490,6 +490,7 @@ dependencies = [
  "bitvec",
  "cortex-a",
  "embedded-graphics",
+ "goblin",
  "lazy_static",
  "linked_list_allocator",
  "pc-keyboard",
@@ -501,6 +502,7 @@ dependencies = [
  "vte",
  "x86_64 0.10.1",
  "xv7-boot",
+ "zeroize",
 ]
 
 [[package]]
