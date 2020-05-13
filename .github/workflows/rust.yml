@@ -17,7 +17,7 @@ jobs:
         run: rustup component add rust-src
       - name: Install cargo-make
         run: cargo install cargo-make
-      - name: Install old cargo-xbuild
+      - name: Install fixed version of cargo-xbuild
         run: cargo install cargo-xbuild --version 0.5.29
       - name: Build
         run: cargo make xbuild
