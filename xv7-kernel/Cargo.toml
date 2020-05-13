@@ -15,9 +15,10 @@ bitvec = { version = "0.17.4", default-features = false, features = ["atomic"] }
 vte = "0.7.1"
 spin = "0.5.2"
 linked_list_allocator = "0.8.2"
-boot = { path = "../xv7-boot", package = "xv7-boot" }
 goblin = { version = "0.2.1", default-features = false, features = ["elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive", "endian_fd"] }
 zeroize = "1.1.0"
+boot = { path = "../xv7-boot", package = "xv7-boot" }
+usyscall = { path = "../xv7-syscall", package = "xv7-syscall" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86_64 = "0.10.1"

@@ -502,12 +502,20 @@ dependencies = [
  "vte",
  "x86_64 0.10.1",
  "xv7-boot",
+ "xv7-syscall",
  "zeroize",
 ]
 
 [[package]]
+name = "xv7-syscall"
+version = "0.1.0"
+
+[[package]]
 name = "xv7-user"
 version = "0.1.0"
+dependencies = [
+ "xv7-syscall",
+]
 
 [[package]]
 name = "zeroize"

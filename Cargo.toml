@@ -1,9 +1,10 @@
 [workspace]
 members = [
-    "xv7-bootloader-uefi",
+    "xv7-syscall",
     "xv7-user",
     "xv7-kernel",
     "xv7-boot",
+    "xv7-bootloader-uefi",
 ]
 
 [profile.dev]

@@ -1,0 +1,7 @@
+[tasks.xbuild]
+command = "cargo"
+args = ["xbuild", "--target", "../xv7-kernel/src/arch/x86_64.json"]
+
+[tasks.xbuild-aarch64]
+command = "cargo"
+args = ["xbuild", "--target", "../xv7-kernel/src/arch/aarch64.json"]
