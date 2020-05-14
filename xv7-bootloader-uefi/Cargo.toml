@@ -9,8 +9,8 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-uefi = "0.4.4"
-uefi-services = "0.2.2"
+uefi = "0.4.5"
+uefi-services = "0.2.3"
 x86_64 = "0.10.1"
 zeroize = "1.1.0"
 goblin = { version = "0.2.1", default-features = false, features = ["elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive", "endian_fd"] }

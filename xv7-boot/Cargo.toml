@@ -9,4 +9,4 @@ edition = "2018"
 
 [dependencies]
 x86_64 = "0.10.1"
-uefi = "0.4.4"
+uefi = "0.4.5"

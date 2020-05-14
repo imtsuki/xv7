@@ -240,12 +240,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rlibc"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc874b127765f014d792f16763a81245ab80500e2ad921ed4ee9e82481ee08fe"
-
-[[package]]
 name = "rustc_version"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -358,9 +352,9 @@ dependencies = [
 
 [[package]]
 name = "uefi"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cec6a2850639f588cc8042140b5deaa2f2170c23db5adb08f4316fa04cdb4a0"
+checksum = "49d83cc50170669570f1f4ee10830e7b372026b764960114dfd7692c1f73f805"
 dependencies = [
  "bitflags",
  "log",
@@ -381,12 +375,11 @@ dependencies = [
 
 [[package]]
 name = "uefi-services"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "97be08ee1419b9fc2c8a3d863cced9775347e3c3c58a1c05eec483e349257edc"
+checksum = "6f07b5330a55bbb0dde643a695184fa018dca43c55d0aa8fed7bc34c44e246af"
 dependencies = [
  "log",
- "rlibc",
  "uefi",
  "x86_64 0.8.3",
 ]

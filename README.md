@@ -10,12 +10,6 @@ Install cargo-make:
 cargo install cargo-make
 ```
 
-Manually install cargo-xbuild version 0.5.29 ([issue](https://github.com/rust-osdev/uefi-rs/issues/133)):
-
-```bash
-cargo install cargo-xbuild --version 0.5.29
-```
-
 Also, you should have the latest version of [QEMU](https://www.qemu.org) installed.
 
 ## Build and Run
