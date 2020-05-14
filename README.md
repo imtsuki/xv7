@@ -32,6 +32,7 @@ For better development experience, install these additional tools:
 
 ```bash
 rustup component add llvm-tools-preview
+cargo install cargo-binutils
 cargo install rustfilt
 ```
 
