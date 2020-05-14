@@ -9,8 +9,7 @@ use xv7_user::syscall;
 
 #[no_mangle]
 fn main() {
-    let mut code = 2;
     loop {
-        code = syscall::hello(code);
+        syscall::write(0, "Hello from userspace".as_bytes()).unwrap();
     }
 }

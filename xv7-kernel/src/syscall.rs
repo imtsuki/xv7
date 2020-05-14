@@ -1,14 +1,34 @@
 pub mod process;
 
+use core::slice;
+use core::str;
+
+use usyscall::error::*;
 use usyscall::number::*;
 
 pub fn syscall(a: usize, b: usize, c: usize, d: usize, e: usize, f: usize) -> usize {
-    match a {
-        SYS_EXIT => println!("SYS_EXIT"),
-        SYS_HELLO => println!("SYS_HELLO"),
-        SYS_EXEC => println!("SYS_EXEC"),
-        _ => println!("SYS_UNKNOWN"),
+    fn inner(a: usize, b: usize, c: usize, d: usize, e: usize, f: usize) -> Result<usize> {
+        match a {
+            SYS_WRITE => write(b, validate_slice(c as *const u8, d)?),
+            _ => Err(Error::new(ENOSYS)),
+        }
     }
-    println!("b: {}, c: {}, d: {}, e: {}, f: {}", b, c, d, e, f);
-    0
+
+    let result = inner(a, b, c, d, e, f);
+
+    Error::mux(result)
+}
+
+pub fn validate_slice<T>(ptr: *const T, len: usize) -> Result<&'static [T]> {
+    Ok(unsafe { slice::from_raw_parts(ptr, len) })
+}
+
+pub fn write(fd: usize, buf: &[u8]) -> Result<usize> {
+    if fd == 0 {
+        let s = str::from_utf8(buf).map_err(|_| Error::new(EFAULT))?;
+        println!("{}", s);
+        Ok(buf.len())
+    } else {
+        Err(Error::new(ENOENT))
+    }
 }

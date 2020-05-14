@@ -26,7 +26,6 @@ pub fn exec(path: &str) {
 
     for ph in image_elf.program_headers {
         if ph.p_type == elf::program_header::PT_LOAD {
-            println!("{:?}", ph.vm_range());
             let page_range = {
                 let start_addr = VirtAddr::new(ph.p_vaddr);
                 let end_addr = start_addr + ph.p_memsz - 1u64;

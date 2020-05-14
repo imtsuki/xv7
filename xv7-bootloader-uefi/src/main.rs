@@ -69,7 +69,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     dbg!(kernel_entry);
 
     let mmap_size = boot_services.memory_map_size();
-    let mut mmap_buf = vec![0u8; mmap_size];
+    let mut mmap_buf = vec![0u8; mmap_size * 2];
     let (_, mmap_iter) = boot_services
         .memory_map(&mut mmap_buf)
         .expect_success("Failed to get memory map");
@@ -100,7 +100,7 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
     // Exit boot services and jump to the kernel.
     info!("Exiting UEFI boot services and jumping to the kernel");
     let mmap_size = boot_services.memory_map_size();
-    let mmap_buf = Box::leak(vec![0u8; mmap_size].into_boxed_slice());
+    let mmap_buf = Box::leak(vec![0u8; mmap_size * 2].into_boxed_slice());
     let (_, mmap_iter) = system_table
         .exit_boot_services(image_handle, mmap_buf)
         .expect_success("UEFI exit boot services failed");
