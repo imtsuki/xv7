@@ -21,9 +21,9 @@ boot = { path = "../xv7-boot", package = "xv7-boot" }
 usyscall = { path = "../xv7-usyscall", package = "xv7-usyscall" }
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
-x86_64 = "0.10.1"
-uart_16550 = "0.2.5"
-uefi = "0.4.4"
+x86_64 = "0.11.0"
+uart_16550 = "0.2.6"
+uefi = "0.4.5"
 raw-cpuid =  { version = "7.0.3", features = ["use_arch"] }
 pc-keyboard = "0.5.0"
 

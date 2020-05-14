@@ -85,8 +85,6 @@ pub fn exec(path: &str) {
         VirtAddr::new(image_elf.entry),
         VirtAddr::new(USER_STACK + 4096 - 16),
     );
-
-    crate::arch::paging::override_user_accessible_bits();
 }
 
 mod images {

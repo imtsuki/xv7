@@ -333,12 +333,12 @@ checksum = "70323afdb8082186c0986da0e10f6e4ed103d681c921c00597e98d9806dac20f"
 
 [[package]]
 name = "uart_16550"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e983688170873ec9a3f21a6afc751fb706cf02836ed9d28a68d2e247dff7ae52"
+checksum = "2b5e5e7b79b55e1aa57b0ab994490d876d9c2f5b18c7716628155207e0e4b197"
 dependencies = [
  "bitflags",
- "x86_64 0.9.6",
+ "x86_64 0.10.3",
 ]
 
 [[package]]
@@ -436,9 +436,9 @@ dependencies = [
 
 [[package]]
 name = "x86_64"
-version = "0.9.6"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4206b60c9f99766329b66962aa8ddc01df6c7edd02edc046b7a69d5df9fcdbcf"
+checksum = "df453cbef6f9a3f703c1866338da79ae8e98a86f7ccd90bca92e6f1583720941"
 dependencies = [
  "bit_field 0.9.0",
  "bitflags",
@@ -446,9 +446,9 @@ dependencies = [
 
 [[package]]
 name = "x86_64"
-version = "0.10.1"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6014ddb75b4f90f5bd2d067dbbd76ed093335b52d14365906801e9d63a69d82b"
+checksum = "365de37eb7c6da582cbb510dd0f3f1235d24ff6309a8a96e8a9909cc9bfd608f"
 dependencies = [
  "bit_field 0.9.0",
  "bitflags",
@@ -459,7 +459,7 @@ name = "xv7-boot"
 version = "0.1.0"
 dependencies = [
  "uefi",
- "x86_64 0.10.1",
+ "x86_64 0.11.0",
 ]
 
 [[package]]
@@ -471,7 +471,7 @@ dependencies = [
  "log",
  "uefi",
  "uefi-services",
- "x86_64 0.10.1",
+ "x86_64 0.11.0",
  "xv7-boot",
  "zeroize",
 ]
@@ -493,7 +493,7 @@ dependencies = [
  "uart_16550",
  "uefi",
  "vte",
- "x86_64 0.10.1",
+ "x86_64 0.11.0",
  "xv7-boot",
  "xv7-usyscall",
  "zeroize",
