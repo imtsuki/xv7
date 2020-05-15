@@ -1,10 +1,6 @@
-use crate::syscall;
-use core::fmt;
-use core::fmt::Write;
-
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::macros::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::io::_print(format_args!($($arg)*)));
 }
 
 #[macro_export]
@@ -13,20 +9,6 @@ macro_rules! println {
     ($($arg:tt)*) => ({
         $crate::print!("{}\n", format_args!($($arg)*));
     })
-}
-
-struct Stdout;
-
-impl fmt::Write for Stdout {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        syscall::write(1, s.as_bytes()).map_err(|_| fmt::Error)?;
-        Ok(())
-    }
-}
-
-#[doc(hidden)]
-pub fn _print(args: fmt::Arguments) {
-    Stdout.write_fmt(args).unwrap();
 }
 
 /// Prints and returns the value of a given expression for quick and dirty

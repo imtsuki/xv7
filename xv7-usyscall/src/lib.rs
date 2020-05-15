@@ -8,3 +8,5 @@ pub mod syscall;
 
 pub use error::Error;
 pub use error::Result;
+
+pub use syscall::*;
