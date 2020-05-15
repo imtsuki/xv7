@@ -24,9 +24,9 @@ pub fn validate_slice<T>(ptr: *const T, len: usize) -> Result<&'static [T]> {
 }
 
 pub fn write(fd: usize, buf: &[u8]) -> Result<usize> {
-    if fd == 0 {
+    if fd == 1 {
         let s = str::from_utf8(buf).map_err(|_| Error::new(EFAULT))?;
-        println!("{}", s);
+        print!("{}", s);
         Ok(buf.len())
     } else {
         Err(Error::new(ENOENT))

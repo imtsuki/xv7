@@ -6,6 +6,7 @@ use crate::{
     memory::{FrameAllocator, FRAME_ALLOCATOR},
 };
 use goblin::elf;
+use goblin::elf::reloc::*;
 use x86_64::structures::paging::{Mapper, Page};
 use x86_64::structures::paging::{OffsetPageTable, PageTableFlags};
 use zeroize::Zeroize;
@@ -77,6 +78,19 @@ pub fn exec(path: &str) {
                 .map_to(page, frame, flags, &mut *frame_allocator)
                 .unwrap()
                 .flush();
+        }
+    }
+
+    // Relocate executable
+    for reloc in image_elf.dynrelas.iter() {
+        match reloc.r_type {
+            R_X86_64_RELATIVE => {
+                let addr = (reloc.r_offset) as *mut u64;
+                unsafe {
+                    *addr = reloc.r_addend.unwrap() as u64;
+                }
+            }
+            _ => unimplemented!("Unhandled reloc type!"),
         }
     }
 
