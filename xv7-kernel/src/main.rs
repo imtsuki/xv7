@@ -19,11 +19,11 @@ pub mod arch;
 mod config;
 pub mod cpu;
 pub mod device;
-mod lang_item;
 #[cfg(target_arch = "x86_64")]
 mod memory;
 mod pretty;
 pub mod process;
+mod rt;
 pub mod scheduler;
 pub mod syscall;
 mod video;
