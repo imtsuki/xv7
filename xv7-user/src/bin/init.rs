@@ -6,5 +6,4 @@ extern crate xv7_user;
 
 fn main() {
     println!("Hello from userspace!");
-    panic!();
 }

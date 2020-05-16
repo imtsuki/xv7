@@ -2,8 +2,7 @@
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
     println!("{}", info);
-    loop { /* FIXME */ }
-    // crate::syscall::exit(-1);
+    crate::syscall::exit(-1);
 }
 
 #[no_mangle]

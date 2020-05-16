@@ -9,6 +9,7 @@ use usyscall::number::*;
 pub fn syscall(a: usize, b: usize, c: usize, d: usize, e: usize, f: usize) -> usize {
     fn inner(a: usize, b: usize, c: usize, d: usize, e: usize, f: usize) -> Result<usize> {
         match a {
+            SYS_EXIT => process::exit(b as isize),
             SYS_WRITE => write(b, validate_slice(c as *const u8, d)?),
             _ => Err(Error::new(ENOSYS)),
         }

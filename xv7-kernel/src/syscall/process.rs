@@ -11,6 +11,16 @@ use x86_64::structures::paging::{Mapper, Page};
 use x86_64::structures::paging::{OffsetPageTable, PageTableFlags};
 use zeroize::Zeroize;
 
+use usyscall::error::*;
+
+pub fn exit(code: isize) -> Result<usize> {
+    let proc = process::my_proc();
+    if proc.pid == 0 {
+        panic!("pid 0 exited with code {}", code);
+    }
+    Ok(0)
+}
+
 pub fn exec(path: &str) {
     let proc = process::my_proc();
 
