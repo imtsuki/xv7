@@ -47,15 +47,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08c48aae112d48ed9f069b33538ea9e3e90aa263cfa3d1c24309612b1f7472de"
 
 [[package]]
-name = "cast"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4b9434b9a5aa1450faa3f9cb14ea0e8c53bb5d2b3c1bfd1ab4fc03e9f33fbfb0"
-dependencies = [
- "rustc_version",
-]
-
-[[package]]
 name = "cc"
 version = "1.0.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -375,13 +366,13 @@ dependencies = [
 
 [[package]]
 name = "uefi-services"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f07b5330a55bbb0dde643a695184fa018dca43c55d0aa8fed7bc34c44e246af"
+checksum = "8a985e3dd3e8ce234af981948ff1138e72936af03b04a90b082f9d8a6f35ad37"
 dependencies = [
  "log",
  "uefi",
- "x86_64 0.8.3",
+ "x86_64 0.11.0",
 ]
 
 [[package]]
@@ -421,17 +412,6 @@ checksum = "d257817081c7dffcdbab24b9e62d2def62e2ff7d00b1c20062551e6cccc145ff"
 dependencies = [
  "proc-macro2",
  "quote",
-]
-
-[[package]]
-name = "x86_64"
-version = "0.8.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d9e3e26fcb51976eafa310e8f2b7a5a83ae8c185443efe50cbc6534a4fffa0d"
-dependencies = [
- "bit_field 0.9.0",
- "bitflags",
- "cast",
 ]
 
 [[package]]
