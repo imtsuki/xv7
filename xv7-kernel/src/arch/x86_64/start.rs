@@ -1,5 +1,6 @@
 use super::*;
-use boot::{BootArgs, KernelEntryFn, BOOT_ARGS_MAGIC};
+use boot::{BootArgs, KernelEntryFn, BOOT_ARGS_MAGIC, MemoryMap};
+use x86_64::structures::paging::{Mapper, Page, PageSize, PageTableFlags, PhysFrame, Size4KiB};
 
 #[used]
 static BSS_ZERO_CHECK: u64 = 0;
@@ -30,6 +31,8 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
 
     dbg!(args);
 
+    print_memory_map(&args.memory_map);
+
     cpuid::init();
 
     gdt::init();
@@ -45,4 +48,16 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     // crate::video::fun_things();
 
     crate::kmain();
+}
+
+fn print_memory_map(mmap:&MemoryMap) {
+    println!("Mem phys map:");
+    for descriptor in mmap.clone().iter {
+        println!(
+            "[mem {:#016x}-{:#016x}] type {}",
+            descriptor.phys_start,
+            descriptor.phys_start + descriptor.page_count * Size4KiB::SIZE - 1,
+            descriptor.ty.0
+        );
+    }
 }
