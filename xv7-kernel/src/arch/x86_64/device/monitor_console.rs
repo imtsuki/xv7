@@ -11,6 +11,7 @@ use vte::{Parser, Perform};
 
 struct Performer {
     pos: (usize, usize),
+    size: (usize, usize),
 }
 
 pub struct MonitorConsole {
@@ -20,9 +21,20 @@ pub struct MonitorConsole {
 
 impl MonitorConsole {
     pub fn new() -> MonitorConsole {
-        MonitorConsole {
-            parser: Parser::new(),
-            performer: Performer { pos: (0, 0) },
+        if let Some(display) = &mut *GOP_DISPLAY.lock() {
+            let display_size = display.size();
+            let (width, height) = (display_size.width as usize, display_size.height as usize);
+            let rows = height / 16;
+            let columns = width / 8;
+            MonitorConsole {
+                parser: Parser::new(),
+                performer: Performer {
+                    pos: (0, 0),
+                    size: (rows, columns),
+                },
+            }
+        } else {
+            panic!("Display error");
         }
     }
 }
@@ -40,11 +52,11 @@ impl Performer {
         let (mut line, _) = self.pos;
         line += 1;
 
-        if line == 25 {
+        if line == self.size.0 {
             if let Some(display) = &mut *GOP_DISPLAY.lock() {
                 display.scroll_up(16);
             }
-            line = 24;
+            line = self.size.0 - 1;
         }
         self.pos = (line, 0)
     }
@@ -61,16 +73,16 @@ impl Performer {
         let (mut line, mut col) = self.pos;
         col += 1;
 
-        if col == 80 {
+        if col == self.size.1 {
             col = 0;
             line += 1;
         }
 
-        if line == 25 {
+        if line == self.size.0 {
             if let Some(display) = &mut *GOP_DISPLAY.lock() {
                 display.scroll_up(16);
             }
-            line = 24;
+            line = self.size.0 - 1;
         }
         self.pos = (line, col)
     }

@@ -57,6 +57,10 @@ impl GopDisplay {
                 let src = base.add((y + distance) * width);
                 core::ptr::copy_nonoverlapping(src, dst, width);
             }
+            for y in height - distance..height {
+                let dst = base.add(y * width);
+                core::ptr::write_bytes(dst, 0, width);
+            }
         }
     }
 }
