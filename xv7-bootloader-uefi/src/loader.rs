@@ -42,7 +42,7 @@ pub fn load_elf(
             let phys_addr = services
                 .allocate_pages(
                     AllocateType::AnyPages,
-                    MemoryType(MEMORY_TYPE_KERNEL),
+                    MemoryType::LOADER_DATA,
                     page_count,
                 )
                 .expect_success("Failed to allocate pages while loading kernel segment");
