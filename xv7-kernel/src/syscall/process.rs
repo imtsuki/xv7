@@ -1,4 +1,3 @@
-use crate::paging;
 use crate::paging::VirtAddr;
 use crate::process;
 use crate::{
@@ -32,7 +31,8 @@ pub fn exec(path: &str) {
     let image_elf = elf::Elf::parse(image).expect("Failed to parse ELF file");
 
     let mut frame_allocator = FRAME_ALLOCATOR.lock();
-    let page_table = unsafe { paging::active_page_table() };
+    // FIXME: we should free the previous vm and set up a new vm
+    let page_table = unsafe { proc.vm.page_table() };
     let mut mapper = unsafe { OffsetPageTable::new(page_table, VirtAddr::new(PAGE_OFFSET_BASE)) };
 
     for ph in image_elf.program_headers {

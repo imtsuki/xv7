@@ -16,3 +16,24 @@ pub fn write(fd: usize, buf: &[u8]) -> Result<usize> {
 pub fn read(fd: usize, buf: &mut [u8]) -> Result<usize> {
     unsafe { syscall3(SYS_READ, fd, buf.as_mut_ptr() as usize, buf.len()) }
 }
+
+pub fn open(path: &str) -> Result<usize> {
+    unsafe { syscall2(SYS_OPEN, path.as_ptr() as usize, path.len()) }
+}
+
+pub fn close(fd: usize) -> Result<usize> {
+    unsafe { syscall1(SYS_CLOSE, fd) }
+}
+
+pub fn exec(fd: usize, args: &[&str], envs: &[&str]) -> Result<usize> {
+    unsafe {
+        syscall5(
+            SYS_EXEC,
+            fd,
+            args.as_ptr() as usize,
+            args.len(),
+            envs.as_ptr() as usize,
+            envs.len(),
+        )
+    }
+}

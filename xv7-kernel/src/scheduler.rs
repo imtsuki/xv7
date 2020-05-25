@@ -1,14 +1,14 @@
 use crate::cpu::my_cpu;
+use crate::paging::VirtAddr;
+use crate::process::initcode;
 use crate::process::Process;
-use crate::syscall::process::exec;
 
 pub fn scheduler() -> ! {
     let cpu = my_cpu();
-    let p = Process::new();
+    let mut p = Process::new();
+    p.set_context_switch_return_address(VirtAddr::new(initcode as *const u8 as u64));
 
     cpu.current_process = Some(p);
-
-    exec("/init");
 
     unsafe {
         cpu.switch_to_process();
