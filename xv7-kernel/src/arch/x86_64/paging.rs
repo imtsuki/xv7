@@ -17,7 +17,6 @@ pub fn disable_identity_mapping() {
 
 pub fn init_frame_allocator(args: &BootArgs) {
     let mut allocator = crate::memory::FRAME_ALLOCATOR.lock();
-
     for descriptor in args.memory_map.clone().iter {
         if descriptor.ty == MemoryType::CONVENTIONAL {
             allocator.install_memory_region(
