@@ -1,6 +1,6 @@
 use super::*;
-use boot::{BootArgs, KernelEntryFn, BOOT_ARGS_MAGIC, MemoryMap};
-use x86_64::structures::paging::{Mapper, Page, PageSize, PageTableFlags, PhysFrame, Size4KiB};
+use crate::memory;
+use boot::{BootArgs, KernelEntryFn, BOOT_ARGS_MAGIC};
 
 #[used]
 static BSS_ZERO_CHECK: u64 = 0;
@@ -22,7 +22,6 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     paging::disable_identity_mapping();
 
     paging::init_frame_allocator(args);
-
     // After this point, we can allocate memory
     crate::allocator::init_heap();
 
@@ -31,7 +30,7 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
 
     dbg!(args);
 
-    print_memory_map(&args.memory_map);
+    memory::print_memory_map(&args.memory_map);
 
     cpuid::init();
 
@@ -48,17 +47,4 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     // crate::video::fun_things();
 
     crate::kmain();
-}
-
-fn print_memory_map(mmap:&MemoryMap) {
-    println!("Mem phys map:");
-    for descriptor in mmap.clone().iter {
-        println!(
-            "[mem {:#016x}-{:#016x} {:>8}] type {}",
-            descriptor.phys_start,
-            descriptor.phys_start + descriptor.page_count * Size4KiB::SIZE - 1,
-            descriptor.page_count,
-            descriptor.ty.0
-        );
-    }
 }

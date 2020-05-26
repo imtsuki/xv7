@@ -48,19 +48,3 @@ macro_rules! dbg {
         ($($crate::dbg!($val)),+,)
     };
 }
-
-#[macro_export]
-macro_rules! dbg_by_eyes {
-    ($args:expr) => (
-        unsafe {
-            use crate::config::PAGE_OFFSET_BASE;
-
-            for i in $args.frame_buffer.base.as_u64()..$args.frame_buffer.base.as_u64()+(($args.frame_buffer.resolution.0 as u64)*200) {
-                *((i+PAGE_OFFSET_BASE) as *mut u8) = 255;
-            }
-            loop{
-                llvm_asm!("hlt");
-            } 
-        }
-    );
-}
