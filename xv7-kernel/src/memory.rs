@@ -137,8 +137,7 @@ enum BuddyFrameStatus {
 /// A block of frames in buddy system, represents the physical memory of (1 << order) size
 #[derive(Copy, Clone)]
 struct BuddyFrame {
-    pre: *mut BuddyFrame, // Simply embed two pointers in it
-    next: *mut BuddyFrame,
+    next: *mut BuddyFrame, // Simply embed a pointers in it
     use_status: BuddyFrameStatus,
     order: u8,
 }
@@ -158,17 +157,19 @@ struct BuddyZone {
 }
 
 impl BuddyFreeArea {
-    unsafe fn frame_exist(&mut self, frame: *mut BuddyFrame) -> *mut BuddyFrame {
+
+    unsafe fn drop_frame(&mut self, frame: *mut BuddyFrame) -> *mut BuddyFrame {
         let mut next = self.head;
+        let mut pre = ptr::null_mut();
         while !next.is_null() && next != frame {
+            pre = next;
             next = (*next).next;
         }
-        return next;
-    }
-
-    unsafe fn drop_frame(&mut self, frame: *mut BuddyFrame) {
+        if next.is_null(){
+            return ptr::null_mut();
+        }
+        
         self.length -= 1;
-        let pre = (*frame).pre;
         let next = (*frame).next;
 
         if !pre.is_null() {
@@ -177,20 +178,14 @@ impl BuddyFreeArea {
             // head
             self.head = next;
         }
-        if !next.is_null() {
-            (*next).pre = pre;
-        }
-        (*frame).pre = ptr::null_mut();
         (*frame).next = ptr::null_mut();
         (*frame).use_status = BuddyFrameStatus::NOTUSED;
+        return frame;
     }
 
     unsafe fn push_frame(&mut self, frame: *mut BuddyFrame) {
         self.length += 1;
         (*frame).next = self.head;
-        if !self.head.is_null() {
-            (*self.head).pre = frame;
-        }
         self.head = frame;
         (*frame).use_status = BuddyFrameStatus::NOTUSED;
     }
@@ -202,9 +197,6 @@ impl BuddyFreeArea {
         self.length -= 1;
         let head = self.head;
         self.head = (*head).next;
-        if !self.head.is_null() {
-            (*self.head).pre = ptr::null_mut();
-        }
         (*head).next = ptr::null_mut();
         (*head).use_status = BuddyFrameStatus::USED;
         return head;
@@ -289,9 +281,8 @@ impl<'zone> BuddyFrameAllocator<'zone> {
             }
             let area = &mut self.zone.free_area[order as usize];
             let buddy_index = get_buddy!(frame_index, order);
-            let buddy_frame = area.frame_exist(&mut self.frames[buddy_index]);
+            let buddy_frame = area.drop_frame(&mut self.frames[buddy_index]);
             if !buddy_frame.is_null() {
-                area.drop_frame(buddy_frame);
                 frame_index = if frame_index < buddy_index {
                     frame_index
                 } else {
@@ -339,19 +330,10 @@ impl<'zone> BuddyFrameAllocator<'zone> {
         for i in 0..MAX_ORDER {
             let area = self.zone.free_area[i as usize];
 
-            if !area.head.is_null() {
-                assert!(
-                    (*area.head).pre.is_null(),
-                    "area({}).head.pre is not null",
-                    i
-                );
-            }
-
             let mut j = 0;
             let mut cur = area.head;
             while !cur.is_null() {
                 let next = (*cur).next;
-                let pre = (*cur).pre;
                 let offset = self.index_of_frame(cur);
                 assert_eq!(
                     offset,
@@ -361,27 +343,6 @@ impl<'zone> BuddyFrameAllocator<'zone> {
                     j,
                     offset
                 );
-                if !next.is_null() {
-                    assert_eq!(
-                        cur,
-                        (*next).pre,
-                        "area({})'s link is brocken between index({}) and index({})",
-                        i,
-                        j,
-                        j + 1
-                    );
-                }
-                if !pre.is_null() {
-                    assert_eq!(
-                        cur,
-                        (*pre).next,
-                        "area({})'s link is brocken between index({}) and index({})",
-                        i,
-                        j - 1,
-                        j
-                    );
-                }
-
                 j += 1;
                 cur = next;
             }
@@ -436,7 +397,6 @@ lazy_static! {
     pub static ref FRAME_ALLOCATOR: Mutex<BuddyFrameAllocator<'static>> = {
         unsafe {
             static mut FRAMES: [BuddyFrame; MAX_FRAMES_SUPPORTED] = [BuddyFrame {
-                pre: ptr::null_mut(),
                 next: ptr::null_mut(),
                 use_status: BuddyFrameStatus::UNCHECKED,
                 order: 0,
