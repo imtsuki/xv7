@@ -1,4 +1,5 @@
 use super::*;
+use crate::memory;
 use boot::{BootArgs, KernelEntryFn, BOOT_ARGS_MAGIC};
 
 #[used]
@@ -21,7 +22,6 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     paging::disable_identity_mapping();
 
     paging::init_frame_allocator(args);
-
     // After this point, we can allocate memory
     crate::allocator::init_heap();
 
@@ -29,6 +29,8 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     console::init();
 
     dbg!(args);
+
+    memory::print_memory_map(&args.memory_map);
 
     cpuid::init();
 

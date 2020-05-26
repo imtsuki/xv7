@@ -6,7 +6,7 @@ QEMU_X86_64_OPT = '''
     -drive if=pflash,format=raw,file=.qemu/OVMF-pure-efi.fd,readonly=on
     -device isa-debug-exit,iobase=0xf4,iosize=0x04
     -serial stdio
-    -m 256M
+    -m 1G
     -net none
 '''
 

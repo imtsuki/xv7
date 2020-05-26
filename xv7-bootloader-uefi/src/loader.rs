@@ -39,10 +39,11 @@ pub fn load_elf(
             // Allocate pages for this segment.
             let page_count = (align_up(ph.p_memsz, Size4KiB::SIZE) / Size4KiB::SIZE) as usize;
 
+            info!("page_count: {}", page_count);
             let phys_addr = services
                 .allocate_pages(
                     AllocateType::AnyPages,
-                    MemoryType(MEMORY_TYPE_KERNEL),
+                    MemoryType::LOADER_DATA,
                     page_count,
                 )
                 .expect_success("Failed to allocate pages while loading kernel segment");
