@@ -20,6 +20,11 @@ zeroize = "1.1.0"
 boot = { path = "../xv7-boot", package = "xv7-boot" }
 usyscall = { path = "../xv7-usyscall", package = "xv7-usyscall" }
 
+[features]
+default = ["frame-allocator-bitmap"]
+frame-allocator-bitmap = []
+frame-allocator-buddy = []
+
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86_64 = "0.11.0"
 uart_16550 = "0.2.6"
