@@ -1,12 +1,11 @@
 use crate::context::Context;
 use crate::cpu::my_cpu;
-use crate::paging::VirtAddr;
+use crate::paging::{AddressSpace, VirtAddr};
 use crate::{
     config::*,
     memory::{FrameAllocator, FRAME_ALLOCATOR},
 };
 use core::sync::atomic::{AtomicU64, Ordering};
-use x86_64::registers::control::Cr3;
 use x86_64::structures::idt::InterruptStackFrameValue;
 
 pub enum ProcessState {
@@ -20,8 +19,9 @@ static NEXT_PID: AtomicU64 = AtomicU64::new(0);
 
 pub struct Process {
     pub pid: u64,
-    pub context: Context,
     pub state: ProcessState,
+    pub vm: AddressSpace,
+    pub context: Context,
     pub kstack: VirtAddr,
 }
 
@@ -37,9 +37,9 @@ impl Process {
 
         let mut context = Context::user(stack_pointer);
 
-        let (frame, _) = Cr3::read();
+        let vm = AddressSpace::new();
 
-        context.cr3 = frame.start_address().as_u64() as usize;
+        context.cr3 = vm.cr3.start_address().as_u64() as usize;
 
         unsafe {
             stack_pointer
@@ -50,12 +50,13 @@ impl Process {
         Process {
             pid: NEXT_PID.fetch_add(1, Ordering::Relaxed),
             context,
+            vm,
             state: ProcessState::Spawn,
             kstack,
         }
     }
 
-    pub fn intr_stack_frame(&self) -> &mut InterruptStackFrameValue {
+    pub fn intr_stack_frame(&mut self) -> &mut InterruptStackFrameValue {
         unsafe {
             &mut *((self.kstack.as_u64() + 4096
                 - core::mem::size_of::<InterruptStackFrameValue>() as u64)
@@ -63,8 +64,16 @@ impl Process {
         }
     }
 
+    pub fn set_context_switch_return_address(&mut self, addr: VirtAddr) {
+        let stack_pointer =
+            self.kstack + 4096usize - core::mem::size_of::<InterruptStackFrameValue>() - 8usize;
+        unsafe {
+            stack_pointer.as_mut_ptr::<u64>().write(addr.as_u64());
+        };
+    }
+
     pub fn set_userspace_return_address(
-        &self,
+        &mut self,
         instruction_pointer: VirtAddr,
         stack_pointer: VirtAddr,
     ) {
@@ -79,6 +88,14 @@ impl Process {
 
 #[naked]
 unsafe fn interrupt_return() {
+    llvm_asm!(
+        "iretq": : : : "volatile"
+    )
+}
+
+#[naked]
+pub unsafe fn initcode() {
+    crate::syscall::process::exec("/init");
     llvm_asm!(
         "iretq": : : : "volatile"
     )

@@ -36,7 +36,7 @@ cargo install cargo-binutils
 cargo install rustfilt
 ```
 
-Compose a bootable USB drive:
+To compose a bootable USB drive:
 
 ```bash
  cargo make compose-esp --env ESP=/path/to/where/your/drive/is/mounted
