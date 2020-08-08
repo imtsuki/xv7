@@ -16,11 +16,11 @@ pub fn print_memory_map(mmap: &MemoryMap) {
     println!("Mem phys map:");
     for descriptor in mmap.clone().iter {
         println!(
-            "[mem {:#016x}-{:#016x} {:>8}] type {}",
+            "[mem {:#016x}-{:#016x} {:>8}] {:?}",
             descriptor.phys_start,
             descriptor.phys_start + descriptor.page_count * Size4KiB::SIZE - 1,
             descriptor.page_count,
-            descriptor.ty.0
+            descriptor.ty
         );
     }
 }

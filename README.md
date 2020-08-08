@@ -26,6 +26,12 @@ You can use KVM to speed up emulation:
 cargo make qemu-kvm
 ```
 
+To compose a bootable USB drive:
+
+```bash
+ cargo make compose-esp --env ESP=/path/to/your/drive
+```
+
 ## Tips
 
 For better development experience, install these additional tools:
@@ -34,12 +40,6 @@ For better development experience, install these additional tools:
 rustup component add llvm-tools-preview
 cargo install cargo-binutils
 cargo install rustfilt
-```
-
-To compose a bootable USB drive:
-
-```bash
- cargo make compose-esp --env ESP=/path/to/where/your/drive/is/mounted
 ```
 
 ## License

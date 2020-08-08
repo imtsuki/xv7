@@ -10,6 +10,7 @@ use x86_64::{align_up, PhysAddr, VirtAddr};
 
 /// UEFI allows us to introduce new memory types
 /// in the 0x70000000..0xFFFFFFFF range.
+#[allow(unused)]
 pub const MEMORY_TYPE_KERNEL: u32 = 0x80000000;
 
 /// This frame allocator marks frames as `MEMORY_TYPE_KERNEL`.

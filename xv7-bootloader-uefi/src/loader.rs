@@ -1,6 +1,5 @@
 use crate::config::*;
 use crate::io::read_file;
-use crate::paging::MEMORY_TYPE_KERNEL;
 use boot::KernelEntry;
 use goblin::elf;
 use goblin::elf::reloc::*;
@@ -8,7 +7,7 @@ use uefi::prelude::*;
 use uefi::table::boot::{AllocateType, MemoryType};
 use x86_64::structures::paging::FrameAllocator;
 use x86_64::structures::paging::{Mapper, Page, PageSize, PageTableFlags, PhysFrame, Size4KiB};
-use x86_64::{align_up, PhysAddr, VirtAddr};
+use x86_64::{align_down, align_up, PhysAddr, VirtAddr};
 use zeroize::Zeroize;
 
 /// Loads kernel image to `KERNEL_BASE`.
@@ -34,22 +33,25 @@ pub fn load_elf(
                 "PT_LOAD range = {:#x?}, to address {:#x} + {:#x?}",
                 ph.file_range(),
                 KERNEL_BASE,
-                ph.vm_range()
+                ph.vm_range(),
             );
+
             // Allocate pages for this segment.
-            let page_count = (align_up(ph.p_memsz, Size4KiB::SIZE) / Size4KiB::SIZE) as usize;
+            let page_count = (align_up(
+                ph.p_vaddr - align_down(ph.p_vaddr, Size4KiB::SIZE) + ph.p_memsz,
+                Size4KiB::SIZE,
+            ) / Size4KiB::SIZE) as usize;
 
             info!("page_count: {}", page_count);
             let phys_addr = services
-                .allocate_pages(
-                    AllocateType::AnyPages,
-                    MemoryType::LOADER_DATA,
-                    page_count,
-                )
+                .allocate_pages(AllocateType::AnyPages, MemoryType::LOADER_DATA, page_count)
                 .expect_success("Failed to allocate pages while loading kernel segment");
 
             let dst = unsafe {
-                core::slice::from_raw_parts_mut(phys_addr as *mut u8, ph.vm_range().len())
+                core::slice::from_raw_parts_mut(
+                    (ph.p_vaddr - align_down(ph.p_vaddr, Size4KiB::SIZE) + phys_addr) as *mut u8,
+                    ph.vm_range().len(),
+                )
             };
 
             dst.zeroize();
@@ -70,8 +72,11 @@ pub fn load_elf(
                 };
 
             let start_frame = PhysFrame::containing_address(PhysAddr::new(phys_addr));
-            let end_frame =
-                PhysFrame::containing_address(PhysAddr::new(phys_addr) + dst.len() - 1u64);
+            let end_frame = PhysFrame::containing_address(
+                PhysAddr::new(phys_addr) + ph.p_vaddr - align_down(ph.p_vaddr, Size4KiB::SIZE)
+                    + dst.len()
+                    - 1u64,
+            );
 
             for (i, frame) in PhysFrame::range_inclusive(start_frame, end_frame).enumerate() {
                 let page = Page::containing_address(
