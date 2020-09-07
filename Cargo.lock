@@ -78,6 +78,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "derive-new"
+version = "0.5.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71f31892cd5c62e414316f2963c5689242c43d8e7bbcaaeca97e5e28c95d91d9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "derive_more"
+version = "0.99.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "298998b1cf6b5b2c8a7b023dfd45821825ce3ba8a8af55c921a0e734e4653f76"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "either"
 version = "1.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -447,6 +469,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "xv7-fs"
+version = "0.1.0"
+source = "git+https://github.com/KB5201314/xv7-fs/#75530d1b109f21ef753567414c5d49e7df1239fa"
+dependencies = [
+ "bitflags",
+ "derive-new",
+ "derive_more",
+ "lazy_static",
+ "spin",
+ "vte",
+ "x86_64",
+ "xv7-usyscall 0.1.0 (git+https://github.com/imtsuki/xv7)",
+ "zeroize",
+]
+
+[[package]]
+name = "xv7-fs-ramfs"
+version = "0.1.0"
+source = "git+https://github.com/KB5201314/xv7-fs/#75530d1b109f21ef753567414c5d49e7df1239fa"
+dependencies = [
+ "bitflags",
+ "derive-new",
+ "derive_more",
+ "lazy_static",
+ "spin",
+ "vte",
+ "x86_64",
+ "xv7-fs",
+ "xv7-usyscall 0.1.0 (git+https://github.com/imtsuki/xv7)",
+ "zeroize",
+]
+
+[[package]]
 name = "xv7-kernel"
 version = "0.1.0"
 dependencies = [
@@ -465,7 +520,9 @@ dependencies = [
  "vte",
  "x86_64",
  "xv7-boot",
- "xv7-usyscall",
+ "xv7-fs",
+ "xv7-fs-ramfs",
+ "xv7-usyscall 0.1.0",
  "zeroize",
 ]
 
@@ -473,8 +530,13 @@ dependencies = [
 name = "xv7-user"
 version = "0.1.0"
 dependencies = [
- "xv7-usyscall",
+ "xv7-usyscall 0.1.0",
 ]
+
+[[package]]
+name = "xv7-usyscall"
+version = "0.1.0"
+source = "git+https://github.com/imtsuki/xv7#d38cb191ab05681b492ac578f3973ffd887bf091"
 
 [[package]]
 name = "xv7-usyscall"

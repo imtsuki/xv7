@@ -27,6 +27,7 @@ mod rt;
 pub mod scheduler;
 pub mod syscall;
 mod video;
+mod fs;
 
 pub use crate::arch::context;
 pub use crate::arch::paging;

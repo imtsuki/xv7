@@ -1,5 +1,6 @@
 use super::*;
 use crate::memory;
+use crate::fs;
 use boot::{BootArgs, KernelEntryFn, BOOT_ARGS_MAGIC};
 
 #[used]
@@ -39,6 +40,8 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     interrupt::init();
 
     interrupt::controller::init();
+
+    fs::init();
 
     syscall::init();
 

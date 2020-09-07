@@ -19,6 +19,8 @@ goblin = { version = "0.2.1", default-features = false, features = ["elf32", "el
 zeroize = "1.1.0"
 boot = { path = "../xv7-boot", package = "xv7-boot" }
 usyscall = { path = "../xv7-usyscall", package = "xv7-usyscall" }
+xv7-fs = { git = "https://github.com/KB5201314/xv7-fs/", package = "xv7-fs" }
+xv7-fs-ramfs = { git = "https://github.com/KB5201314/xv7-fs/", package = "xv7-fs-ramfs" }
 
 [features]
 default = ["frame-allocator-bitmap"]
