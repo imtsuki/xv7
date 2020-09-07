@@ -8,6 +8,7 @@
 #![feature(llvm_asm)]
 #![feature(naked_functions)]
 
+#[macro_use]
 extern crate alloc;
 
 #[macro_use]
