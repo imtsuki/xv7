@@ -7,8 +7,13 @@ members = [
     "xv7-bootloader-uefi",
 ]
 
+[patch.'https://github.com/imtsuki/xv7']
+usyscall = { path = "./xv7-usyscall", package = "xv7-usyscall" }
+
 [profile.dev]
 panic = "abort"
 
 [profile.release]
 panic = "abort"
+
+
