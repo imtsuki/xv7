@@ -543,8 +543,6 @@ name = "xv7-usyscall"
 version = "0.1.0"
 dependencies = [
  "bitflags",
- "derive-new",
- "derive_more",
 ]
 
 [[package]]

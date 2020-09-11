@@ -3,7 +3,6 @@
 
 #[macro_use]
 extern crate bitflags;
-extern crate alloc;
 
 pub mod arch;
 pub mod error;

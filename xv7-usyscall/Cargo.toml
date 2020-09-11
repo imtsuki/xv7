@@ -8,5 +8,3 @@ edition = "2018"
 
 [dependencies]
 bitflags = "1.2.1"
-derive-new = { version = "0.5.8", default-features = false }
-derive_more = "0.99.7"

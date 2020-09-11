@@ -1,15 +1,4 @@
-use alloc::string::String;
-use core::fmt::Debug;
-use core::ptr;
-use core::str;
-use derive_more::Display;
-
-use crate::alloc::string::ToString;
-use alloc::collections::btree_map::BTreeMap;
-use alloc::sync::{Arc, Weak};
-use alloc::vec::Vec;
 use core::fmt;
-use derive_new::new;
 
 const NAME_MAX_LEN: usize = 255;
 
@@ -60,7 +49,7 @@ impl Default for Direntory {
     }
 }
 
-impl Debug for Direntory {
+impl fmt::Debug for Direntory {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -68,12 +57,12 @@ impl Debug for Direntory {
             self.ino,
             self.off,
             self.name_len,
-            String::from_utf8_lossy(&self.name[0..self.name_len]),
+            &self.name[0..self.name_len],
         )
     }
 }
 
-#[derive(new, Clone, Default, Debug)]
+#[derive(Clone, Default, Debug)]
 pub struct Stat {
     pub mode: INodeType,
     pub uid: usize,
