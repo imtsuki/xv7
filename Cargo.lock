@@ -541,6 +541,11 @@ source = "git+https://github.com/imtsuki/xv7#d38cb191ab05681b492ac578f3973ffd887
 [[package]]
 name = "xv7-usyscall"
 version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "derive-new",
+ "derive_more",
+]
 
 [[package]]
 name = "zeroize"
