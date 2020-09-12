@@ -471,7 +471,7 @@ dependencies = [
 [[package]]
 name = "xv7-fs"
 version = "0.1.0"
-source = "git+https://github.com/KB5201314/xv7-fs/#1fc82c9f9e8a777c8d1feb7afdfcd05a193de490"
+source = "git+https://github.com/KB5201314/xv7-fs/#7abd27b3c247b931e367f4848630d0f1da4c8f67"
 dependencies = [
  "bitflags",
  "derive-new",
@@ -487,7 +487,7 @@ dependencies = [
 [[package]]
 name = "xv7-fs-ramfs"
 version = "0.1.0"
-source = "git+https://github.com/KB5201314/xv7-fs/#1fc82c9f9e8a777c8d1feb7afdfcd05a193de490"
+source = "git+https://github.com/KB5201314/xv7-fs/#7abd27b3c247b931e367f4848630d0f1da4c8f67"
 dependencies = [
  "bitflags",
  "derive-new",

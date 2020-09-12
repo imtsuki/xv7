@@ -1,11 +1,15 @@
 use crate::context::Context;
 use crate::cpu::my_cpu;
+use crate::fs;
 use crate::paging::{AddressSpace, VirtAddr};
 use crate::{
     config::*,
     memory::{FrameAllocator, FRAME_ALLOCATOR},
 };
+use alloc::collections::btree_map::BTreeMap;
 use core::sync::atomic::{AtomicU64, Ordering};
+use fs::FileRef;
+use usyscall::error::*;
 use x86_64::structures::idt::InterruptStackFrameValue;
 
 pub enum ProcessState {
@@ -23,6 +27,7 @@ pub struct Process {
     pub vm: AddressSpace,
     pub context: Context,
     pub kstack: VirtAddr,
+    pub fdt: FileDescriptorTable,
 }
 
 impl Process {
@@ -53,6 +58,7 @@ impl Process {
             vm,
             state: ProcessState::Spawn,
             kstack,
+            fdt: FileDescriptorTable::new(),
         }
     }
 
@@ -104,4 +110,55 @@ pub unsafe fn initcode() {
 pub fn my_proc() -> &'static mut Process {
     let cpu = my_cpu();
     cpu.current_process.as_mut().unwrap()
+}
+
+pub struct FileDescriptorTable {
+    fds: BTreeMap<usize, FileRef>,
+}
+
+impl FileDescriptorTable {
+    pub fn new() -> FileDescriptorTable {
+        FileDescriptorTable {
+            fds: BTreeMap::new(),
+        }
+    }
+    pub fn get_file(&self, fd: usize) -> Result<FileRef> {
+        match self.fds.get(&fd) {
+            Some(file) => Ok(file.clone()),
+            None => Err(Error::new(EBADF)),
+        }
+    }
+
+    pub fn close_fd(&mut self, fd: usize) -> Result<usize> {
+        match self.fds.remove(&fd) {
+            Some(file) => {
+                let mut fw = file.write();
+                fw.ref_count -= 1;
+                if fw.ref_count == 0 {
+                    drop(fw);
+                    fs::REGISTERED_FS.lock().vfs_close(&file);
+                }
+                Ok(0)
+            }
+            None => Err(Error::new(EBADF)),
+        }
+    }
+
+    pub fn open_fd(&mut self, file: &fs::FileRef) -> Result<usize> {
+        // TODO: implement devfs
+        for i in 3..=usize::MAX {
+            if !self.fds.contains_key(&i) {
+                let fd = i;
+                let mut fw = file.write();
+                fw.ref_count += 1;
+                self.fds.insert(fd, file.clone());
+                return Ok(fd);
+            }
+        }
+        Err(Error::new(EMFILE))
+    }
+
+    pub fn dup2(&self, fd: usize) {
+        todo!()
+    }
 }

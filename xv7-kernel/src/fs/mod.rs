@@ -1,8 +1,8 @@
 use super::*;
-use alloc::vec::Vec;
 use lazy_static::lazy_static;
 use spin::Mutex;
-use xv7_fs::vfs::*;
+use usyscall::fs::*;
+pub use xv7_fs::vfs::*;
 use xv7_fs_ramfs::ramfs;
 
 pub fn init() {
@@ -20,7 +20,6 @@ pub fn init() {
 /// This function is used to temporarily demonstrate the availability of the file system
 pub fn test_vfs() {
     println!("xv7-vfs test start");
-
     let root = REGISTERED_FS.lock().vfs_lookup("/").unwrap();
     println!("[vfs_lookup ({})] ret: {}", "/", *root.read());
 
@@ -33,7 +32,7 @@ pub fn test_vfs() {
     let mut stat = Stat::default();
     REGISTERED_FS
         .lock()
-        .vfs_stat("/dir/file", unsafe { &mut stat })
+        .vfs_stat("/dir/file", &mut stat)
         .unwrap();
     println!("[vfs_stat ({} {:?})]", "/dir/file", stat);
     let mut opened_wo_file = REGISTERED_FS
@@ -88,15 +87,15 @@ pub fn test_vfs() {
         *opened_dir.read()
     );
 
-    let mut dir = Direntory::default();
+    let mut dirs = vec![Direntory::default(); 2];
     let ret = REGISTERED_FS
         .lock()
-        .vfs_readdir(&opened_dir, &mut dir)
+        .vfs_readdir(&opened_dir, &mut dirs)
         .unwrap();
     println!(
         "[vfs_readdir ({} {:?})] ret: {}",
         *opened_dir.read(),
-        &dir,
+        &dirs,
         ret
     );
 
