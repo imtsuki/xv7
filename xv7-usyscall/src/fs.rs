@@ -1,4 +1,5 @@
 use core::fmt;
+use core::str;
 
 const NAME_MAX_LEN: usize = 255;
 
@@ -57,7 +58,7 @@ impl fmt::Debug for Direntory {
             self.ino,
             self.off,
             self.name_len,
-            &self.name[0..self.name_len],
+            unsafe { str::from_utf8_unchecked(&self.name[0..self.name_len]) },
         )
     }
 }

@@ -10,3 +10,5 @@ pub mod process;
 mod rt;
 
 pub use usyscall as syscall;
+pub use usyscall::fs;
+

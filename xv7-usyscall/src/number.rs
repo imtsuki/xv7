@@ -8,4 +8,6 @@ pub const SYS_MKDIR: usize = 7;
 pub const SYS_MKNOD: usize = 8;
 pub const SYS_STAT: usize = 9;
 pub const SYS_UNLINK: usize = 10;
+pub const SYS_GETDENTS: usize = 11;
+
 

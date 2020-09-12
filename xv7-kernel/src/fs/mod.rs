@@ -14,7 +14,7 @@ pub fn init() {
         println!("[REGISTERED_FS]: {}", *fs);
         println!("[root]: {}", *fs.get_root().read());
     }
-    test_vfs();
+    // test_vfs();
 }
 
 /// This function is used to temporarily demonstrate the availability of the file system
