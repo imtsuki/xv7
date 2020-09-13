@@ -1,6 +1,6 @@
+pub use crate::fs::*;
 use crate::syscall;
 pub use crate::syscall::*;
-pub use crate::fs::*;
 
 use core::fmt;
 use core::fmt::Write;

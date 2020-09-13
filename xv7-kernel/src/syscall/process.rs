@@ -76,18 +76,25 @@ pub fn exec(path: &str) {
 
     // allocate and map user stack.
     {
-        let page = Page::containing_address(VirtAddr::new(USER_STACK));
-        let frame = frame_allocator.allocate_frame().unwrap();
-        let flags = PageTableFlags::PRESENT
-            | PageTableFlags::USER_ACCESSIBLE
-            | PageTableFlags::WRITABLE
-            | PageTableFlags::NO_EXECUTE;
-
-        unsafe {
-            mapper
-                .map_to(page, frame, flags, &mut *frame_allocator)
-                .unwrap()
-                .flush();
+        let page_range = {
+            let start_addr = VirtAddr::new(USER_STACK);
+            let end_addr = VirtAddr::new(USER_STACK + USER_STACK_SIZE - 1u64);
+            let start_page = Page::containing_address(start_addr);
+            let end_page = Page::containing_address(end_addr);
+            Page::range_inclusive(start_page, end_page)
+        };
+        for page in page_range {
+            let frame = frame_allocator.allocate_frame().unwrap();
+            let flags = PageTableFlags::PRESENT
+                | PageTableFlags::USER_ACCESSIBLE
+                | PageTableFlags::WRITABLE
+                | PageTableFlags::NO_EXECUTE;
+            unsafe {
+                mapper
+                    .map_to(page, frame, flags, &mut *frame_allocator)
+                    .unwrap()
+                    .flush();
+            }
         }
     }
 
@@ -103,11 +110,16 @@ pub fn exec(path: &str) {
             _ => unimplemented!("Unhandled reloc type!"),
         }
     }
+    println!(
+        "image_elf.entry: {:X}, rsp: {:X}",
+        image_elf.entry,
+        USER_STACK + USER_STACK_SIZE - 16
+    );
 
     // FIXME: magic number
     proc.set_userspace_return_address(
         VirtAddr::new(image_elf.entry),
-        VirtAddr::new(USER_STACK + 4096 - 16),
+        VirtAddr::new(USER_STACK + USER_STACK_SIZE - 16),
     );
 }
 
