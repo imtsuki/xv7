@@ -132,7 +132,7 @@ unsafe fn call_kernel_entry() -> ! {
             resolution: RESOLUTION,
         },
         memory_map: MemoryMap {
-            iter: MMAP_ITER.read(),
+            iter: MMAP_ITER.assume_init_read(),
         },
     };
     kernel_entry(&args);
