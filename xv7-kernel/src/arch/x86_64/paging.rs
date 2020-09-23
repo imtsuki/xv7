@@ -1,6 +1,5 @@
 use crate::{config::*, memory::FrameAllocator};
-use boot::BootArgs;
-use uefi::table::boot::MemoryType;
+use boot::{BootArgs,MemoryType};
 use x86_64::registers::control::Cr3;
 use x86_64::structures::paging::{PageTable, PageTableFlags, PhysFrame};
 pub use x86_64::{PhysAddr, VirtAddr};
