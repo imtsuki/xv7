@@ -28,7 +28,6 @@ frame-allocator-buddy = []
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86_64 = "0.11.0"
 uart_16550 = "0.2.6"
-uefi = "0.4.5"
 raw-cpuid =  { version = "7.0.3", features = ["use_arch"] }
 pc-keyboard = "0.5.0"
 
