@@ -8,6 +8,7 @@ pub mod config;
 use core::fmt;
 use uefi::table::boot::MemoryMapIter;
 pub use x86_64::{PhysAddr, VirtAddr};
+pub use uefi::table::boot::MemoryType;
 
 /// Function signature for kernel entry point.
 #[cfg(target_arch = "x86_64")]
