@@ -111,6 +111,12 @@ pub fn exec(path: &str) {
     );
 }
 
+pub fn fork() -> Result<usize> {
+    let proc = process::my_proc();
+
+    Ok(0)
+}
+
 mod images {
     pub const INIT: &'static [u8] = include_bytes!("../../../target/x86_64/debug/init");
 }

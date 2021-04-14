@@ -5,38 +5,64 @@ use x86_64::registers::rflags::RFlags;
 use x86_64::VirtAddr;
 
 #[naked]
+#[inline(never)]
 pub unsafe extern "C" fn syscall_entry() {
-    llvm_asm!(
-    "
-        swapgs              // Load kernel TSS pointer
-        movq %rsp, %gs:28   // Save userspace %rsp
-        movq %gs:4, %rsp    // Load TSS %rsp
-        pushq $$0x1b        // Push userspace data segment
-        pushq %gs:28        // Push userspace %rsp
-        movq $$0, %gs:28    // Clear userspace %rsp
-        pushq %r11          // Push rflags
-        pushq $$0x23        // Push userspace code segment
-        pushq %rcx          // Push userspace return pointer
-        swapgs              // Restore %gs
-    " : : : : "volatile"
+    asm!(
+        "swapgs",                     // Load kernel TSS pointer
+        "mov gs:[0x1c], rsp",         // Save userspace %rsp
+        "mov rsp, gs:[0x4]",          // Load TSS %rsp
+        "push 0x1b",                  // Push userspace data segment
+        "push gs:[0x1c]",             // Push userspace %rsp
+        "mov QWORD PTR gs:[0x1c], 0", // Clear userspace %rsp
+        "push r11",                   // Push rflags
+        "push 0x23",                  // Push userspace code segment
+        "push rcx",                   // Push userspace return pointer
+        "swapgs",                     // Restore %gs
+        // push preserved
+        "push rbx",
+        "push rbp",
+        "push r12",
+        "push r13",
+        "push r14",
+        "push r15",
+        // push scratch
+        "push rax",
+        "push r11",
+        "push r10",
+        "push r9",
+        "push r8",
+        "push rdi",
+        "push rsi",
+        "push rdx",
+        "push rcx",
+        // call syscall_inner
+        "mov rdi, rsp",
+        "call {}",
+        // pop scratch
+        "pop rcx",
+        "pop rdx",
+        "pop rsi",
+        "pop rdi",
+        "pop r8",
+        "pop r9",
+        "pop r10",
+        "pop r11",
+        "pop rax",
+        // pop preserved
+        "pop r15",
+        "pop r14",
+        "pop r13",
+        "pop r12",
+        "pop rbp",
+        "pop rbx",
+        // interrupt return
+        "iretq",
+        sym syscall_inner,
+        options(noreturn),
     );
-
-    preserved_push!();
-    scratch_push!();
-
-    // FIXME: overrides stack.scratch.rcx?
-    let rsp: usize;
-    llvm_asm!("" : "={rsp}"(rsp) : : : "volatile");
-
-    syscall_inner(rsp as *mut SyscallStackFrame);
-
-    scratch_pop!();
-    preserved_pop!();
-
-    interrupt_return!();
 }
 
-fn syscall_inner(stack: *mut SyscallStackFrame) {
+extern "C" fn syscall_inner(stack: *mut SyscallStackFrame) {
     let stack = unsafe { &mut *stack };
     let scratch = &stack.scratch;
     stack.scratch.rax = crate::syscall::syscall(

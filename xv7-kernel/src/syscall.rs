@@ -11,6 +11,7 @@ pub fn syscall(a: usize, b: usize, c: usize, d: usize, e: usize, f: usize) -> us
         match a {
             SYS_EXIT => process::exit(b as isize),
             SYS_WRITE => write(b, validate_slice(c as *const u8, d)?),
+            SYS_FORK => process::fork(),
             _ => Err(Error::new(ENOSYS)),
         }
     }

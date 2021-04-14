@@ -6,7 +6,7 @@
 pub mod config;
 
 use core::fmt;
-use uefi::table::boot::MemoryMapIter;
+use uefi::table::boot::MemoryDescriptor;
 pub use x86_64::{PhysAddr, VirtAddr};
 
 /// Function signature for kernel entry point.
@@ -53,6 +53,41 @@ pub struct BootArgs {
     pub memory_map: MemoryMap,
     /* pub memory_map: &'static [MemoryDescriptor], */
 }
+
+/// Workaround
+#[derive(Debug, Clone)]
+pub struct MemoryMapIter<'buf> {
+    buffer: &'buf [u8],
+    entry_size: usize,
+    index: usize,
+    len: usize,
+}
+
+impl<'buf> Iterator for MemoryMapIter<'buf> {
+    type Item = &'buf MemoryDescriptor;
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let sz = self.len - self.index;
+
+        (sz, Some(sz))
+    }
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.len {
+            let ptr = self.buffer.as_ptr() as usize + self.entry_size * self.index;
+
+            self.index += 1;
+
+            let descriptor = unsafe { &*(ptr as *const MemoryDescriptor) };
+
+            Some(descriptor)
+        } else {
+            None
+        }
+    }
+}
+
+impl ExactSizeIterator for MemoryMapIter<'_> {}
 
 /// Memory map
 #[repr(C)]

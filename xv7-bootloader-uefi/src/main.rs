@@ -22,12 +22,12 @@ mod paging;
 use alloc::boxed::Box;
 use core::mem::MaybeUninit;
 
+use boot::MemoryMapIter;
 use boot::BOOT_ARGS_MAGIC;
 use boot::{BootArgs, FrameBufferDescriptor, KernelEntry, KernelEntryFn, MemoryMap};
 
 use chrono::prelude::*;
 use uefi::prelude::*;
-use uefi::table::boot::MemoryMapIter;
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
@@ -132,7 +132,7 @@ unsafe fn call_kernel_entry() -> ! {
             resolution: RESOLUTION,
         },
         memory_map: MemoryMap {
-            iter: MMAP_ITER.read(),
+            iter: MMAP_ITER.assume_init_read(),
         },
     };
     kernel_entry(&args);

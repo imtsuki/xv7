@@ -37,3 +37,7 @@ pub fn exec(fd: usize, args: &[&str], envs: &[&str]) -> Result<usize> {
         )
     }
 }
+
+pub fn fork() -> Result<usize> {
+    unsafe { syscall0(SYS_FORK) }
+}

@@ -11,7 +11,7 @@ lazy_static! {
     );
 }
 
-pub extern "x86-interrupt" fn handler(_stack_frame: &mut InterruptStackFrame) {
+pub extern "x86-interrupt" fn handler(_stack_frame: InterruptStackFrame) {
     let mut keyboard = KEYBOARD.lock();
     let mut port = Port::<u8>::new(0x60);
     let scancode = unsafe { port.read() };

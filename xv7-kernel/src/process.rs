@@ -87,18 +87,22 @@ impl Process {
 }
 
 #[naked]
-unsafe fn interrupt_return() {
-    llvm_asm!(
-        "iretq": : : : "volatile"
-    )
+unsafe extern "C" fn interrupt_return() {
+    asm!("iretq", options(noreturn))
 }
 
 #[naked]
-pub unsafe fn initcode() {
-    crate::syscall::process::exec("/init");
-    llvm_asm!(
-        "iretq": : : : "volatile"
+pub unsafe extern "C" fn initcode() {
+    asm!(
+        "call {}",
+        "iretq",
+        sym initcode_exec,
+        options(noreturn)
     )
+}
+
+extern "C" fn initcode_exec() {
+    crate::syscall::process::exec("/init");
 }
 
 pub fn my_proc() -> &'static mut Process {

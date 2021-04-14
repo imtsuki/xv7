@@ -45,34 +45,48 @@ impl Context {
 
     #[inline(never)]
     #[naked]
-    pub unsafe fn switch_to(&mut self, next: &Context) {
-        llvm_asm!("mov $0, cr3" : "=r"(self.cr3) : : "memory" : "intel", "volatile");
-        if next.cr3 != self.cr3 {
-            llvm_asm!("mov cr3, $0" : : "r"(next.cr3) : "memory" : "intel", "volatile");
-        }
+    pub unsafe extern "C" fn switch_to(&mut self, _next: &Context) {
+        asm!(
+            "
+            mov rcx, cr3
+            mov [rdi], rcx
+            mov rax, [rsi]
+            cmp rax, rcx
+    
+            je switch_to.same_cr3
+            mov cr3, rax
+    
+            switch_to.same_cr3:
+            pushfq
+            pop QWORD PTR [rdi + 0x10]
 
-        llvm_asm!("pushfq ; pop $0" : "=r"(self.rflags) : : "memory" : "intel", "volatile");
-        llvm_asm!("push $0 ; popfq" : : "r"(next.rflags) : "memory" : "intel", "volatile");
+            push QWORD PTR [rsi + 0x10]
+            popfq
 
-        llvm_asm!("mov $0, rbx" : "=r"(self.rbx) : : "memory" : "intel", "volatile");
-        llvm_asm!("mov rbx, $0" : : "r"(next.rbx) : "memory" : "intel", "volatile");
+            mov [rdi + 0x18], r15
+            mov r15, [rsi + 0x18]
+    
+            mov [rdi + 0x20], r14
+            mov r14, [rsi + 0x20]
+    
+            mov [rdi + 0x28], r13
+            mov r13, [rsi + 0x28]
+    
+            mov [rdi + 0x30], r12
+            mov r12, [rsi + 0x30]
+    
+            mov [rdi + 0x38], rbp
+            mov rbp, [rsi + 0x38]
+    
+            mov [rdi + 0x40], rbx
+            mov rbx, [rsi + 0x40]
+    
+            mov [rdi + 0x08], rsp
+            mov rsp, [rsi + 0x08]
 
-        llvm_asm!("mov $0, r12" : "=r"(self.r12) : : "memory" : "intel", "volatile");
-        llvm_asm!("mov r12, $0" : : "r"(next.r12) : "memory" : "intel", "volatile");
-
-        llvm_asm!("mov $0, r13" : "=r"(self.r13) : : "memory" : "intel", "volatile");
-        llvm_asm!("mov r13, $0" : : "r"(next.r13) : "memory" : "intel", "volatile");
-
-        llvm_asm!("mov $0, r14" : "=r"(self.r14) : : "memory" : "intel", "volatile");
-        llvm_asm!("mov r14, $0" : : "r"(next.r14) : "memory" : "intel", "volatile");
-
-        llvm_asm!("mov $0, r15" : "=r"(self.r15) : : "memory" : "intel", "volatile");
-        llvm_asm!("mov r15, $0" : : "r"(next.r15) : "memory" : "intel", "volatile");
-
-        llvm_asm!("mov $0, rsp" : "=r"(self.rsp) : : "memory" : "intel", "volatile");
-        llvm_asm!("mov rsp, $0" : : "r"(next.rsp) : "memory" : "intel", "volatile");
-
-        llvm_asm!("mov $0, rbp" : "=r"(self.rbp) : : "memory" : "intel", "volatile");
-        llvm_asm!("mov rbp, $0" : : "r"(next.rbp) : "memory" : "intel", "volatile");
+            ret
+            ",
+            options(noreturn)
+        );
     }
 }
