@@ -13,7 +13,7 @@ uefi = "0.8.0"
 uefi-services = "=0.5.0"
 x86_64 = "0.14.0"
 zeroize = "1.1.0"
-goblin = { version = "0.2.1", default-features = false, features = ["elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive", "endian_fd"] }
+goblin = { version = "0.4.0", default-features = false, features = ["elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive", "endian_fd"] }
 log = { version = "0.4.8", default-features = false }
 chrono = { version = "0.4.11", default-features = false }
 boot = { path = "../xv7-boot", package = "xv7-boot" }

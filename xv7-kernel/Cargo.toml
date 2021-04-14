@@ -13,9 +13,9 @@ embedded-graphics = { version = "0.6.2" }
 tinybmp = { version = "0.2.2", features = [ "graphics" ]}
 bitvec = { version = "0.17.4", default-features = false, features = ["atomic"] }
 vte = "0.7.1"
-spin = "0.5.2"
+spin = "0.9.0"
 linked_list_allocator = "0.8.11"
-goblin = { version = "0.2.1", default-features = false, features = ["elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive", "endian_fd"] }
+goblin = { version = "0.4.0", default-features = false, features = ["elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive", "endian_fd"] }
 zeroize = "1.1.0"
 boot = { path = "../xv7-boot", package = "xv7-boot" }
 usyscall = { path = "../xv7-usyscall", package = "xv7-usyscall" }
@@ -29,7 +29,7 @@ frame-allocator-buddy = []
 x86_64 = "0.14.0"
 uart_16550 = "0.2.12"
 uefi = "0.8.0"
-raw-cpuid =  { version = "7.0.3", features = ["use_arch"] }
+raw-cpuid = "9.0.0"
 pc-keyboard = "0.5.0"
 
 [target.'cfg(target_arch = "aarch64")'.dependencies]
