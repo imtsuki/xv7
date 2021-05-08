@@ -1,11 +1,13 @@
 use crate::context::Context;
 use crate::cpu::my_cpu;
+use crate::fs::file::File;
 use crate::paging::{AddressSpace, VirtAddr};
 use crate::{
     config::*,
     memory::{FrameAllocator, FRAME_ALLOCATOR},
 };
-use core::sync::atomic::{AtomicU64, Ordering};
+use alloc::vec::Vec;
+use core::sync::atomic::{AtomicUsize, Ordering};
 use x86_64::structures::idt::InterruptStackFrameValue;
 
 pub enum ProcessState {
@@ -15,14 +17,15 @@ pub enum ProcessState {
     Zombie,
 }
 
-static NEXT_PID: AtomicU64 = AtomicU64::new(0);
+static NEXT_PID: AtomicUsize = AtomicUsize::new(0);
 
 pub struct Process {
-    pub pid: u64,
+    pub pid: usize,
     pub state: ProcessState,
     pub vm: AddressSpace,
     pub context: Context,
     pub kstack: VirtAddr,
+    pub fds: Vec<File>,
 }
 
 impl Process {
@@ -53,7 +56,14 @@ impl Process {
             vm,
             state: ProcessState::Spawn,
             kstack,
+            fds: Vec::new(),
         }
+    }
+
+    pub fn initcode() -> Process {
+        let mut p = Process::new();
+        p.set_context_switch_return_address(VirtAddr::new(initcode as *const u8 as u64));
+        p
     }
 
     pub fn intr_stack_frame(&mut self) -> &mut InterruptStackFrameValue {
@@ -64,7 +74,7 @@ impl Process {
         }
     }
 
-    pub fn set_context_switch_return_address(&mut self, addr: VirtAddr) {
+    fn set_context_switch_return_address(&mut self, addr: VirtAddr) {
         let stack_pointer =
             self.kstack + 4096usize - core::mem::size_of::<InterruptStackFrameValue>() - 8usize;
         unsafe {
@@ -86,13 +96,24 @@ impl Process {
     }
 }
 
+impl Clone for Process {
+    fn clone(&self) -> Self {
+        let mut p = Process::new();
+
+        p
+    }
+}
+
 #[naked]
 unsafe extern "C" fn interrupt_return() {
     asm!("iretq", options(noreturn))
 }
 
 #[naked]
-pub unsafe extern "C" fn initcode() {
+unsafe extern "C" fn initcode() {
+    extern "C" fn initcode_exec() {
+        crate::syscall::process::exec("/init");
+    }
     asm!(
         "call {}",
         "iretq",
@@ -101,8 +122,9 @@ pub unsafe extern "C" fn initcode() {
     )
 }
 
-extern "C" fn initcode_exec() {
-    crate::syscall::process::exec("/init");
+#[naked]
+unsafe extern "C" fn fork_return() {
+    asm!("retq", options(noreturn));
 }
 
 pub fn my_proc() -> &'static mut Process {

@@ -19,7 +19,16 @@ pub extern "x86-interrupt" fn handler(_stack_frame: InterruptStackFrame) {
     if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
         if let Some(key) = keyboard.process_keyevent(key_event) {
             match key {
-                DecodedKey::Unicode(character) => print!("{}", character),
+                DecodedKey::Unicode(c) => {
+                    print!("{}", c);
+                    let mut buf = [0; 1];
+                    c.encode_utf8(&mut buf);
+
+                    match crate::device::console::KEYBOARD_BUFFER.push(buf[0]) {
+                        Ok(()) => (),
+                        Err(_) => println!("key queue full; dropping key"),
+                    }
+                }
                 DecodedKey::RawKey(key) => print!("{:?}", key),
             }
         }

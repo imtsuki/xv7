@@ -17,5 +17,10 @@ pub extern "x86-interrupt" fn handler(_stack_frame: InterruptStackFrame) {
 
     print!("{}", byte as char);
 
+    match crate::device::console::KEYBOARD_BUFFER.push(byte) {
+        Ok(()) => (),
+        Err(_) => println!("key queue full; dropping key"),
+    }
+
     LOCAL_APIC.lock().end_of_interrupt();
 }

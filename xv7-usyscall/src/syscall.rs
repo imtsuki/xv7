@@ -41,3 +41,15 @@ pub fn exec(fd: usize, args: &[&str], envs: &[&str]) -> Result<usize> {
 pub fn fork() -> Result<usize> {
     unsafe { syscall0(SYS_FORK) }
 }
+
+pub fn getpid() -> Result<usize> {
+    unsafe { syscall0(SYS_GETPID) }
+}
+
+pub fn r#yield() -> Result<usize> {
+    unsafe { syscall0(SYS_YIELD) }
+}
+
+pub fn mknod(path: &str, dev: usize) -> Result<usize> {
+    unsafe { syscall3(SYS_MKNOD, path.as_ptr() as usize, path.len(), dev) }
+}

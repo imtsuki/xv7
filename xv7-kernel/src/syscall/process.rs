@@ -1,9 +1,9 @@
-use crate::paging::VirtAddr;
 use crate::process;
 use crate::{
     config::*,
     memory::{FrameAllocator, FRAME_ALLOCATOR},
 };
+use crate::{cpu::my_cpu, paging::VirtAddr};
 use goblin::elf;
 use goblin::elf::reloc::*;
 use x86_64::structures::paging::{Mapper, Page};
@@ -112,11 +112,25 @@ pub fn exec(path: &str) {
 }
 
 pub fn fork() -> Result<usize> {
-    let proc = process::my_proc();
+    let _proc = process::my_proc();
 
     Ok(0)
 }
 
+pub fn getpid() -> Result<usize> {
+    Ok(process::my_proc().pid)
+}
+
 mod images {
     pub const INIT: &'static [u8] = include_bytes!("../../../target/x86_64/debug/init");
+}
+
+pub(crate) fn r#yield() -> Result<usize> {
+    let cpu = my_cpu();
+    if cpu.current_process.is_some() {
+        unsafe {
+            cpu.switch_to_kernel();
+        }
+    }
+    Ok(0)
 }

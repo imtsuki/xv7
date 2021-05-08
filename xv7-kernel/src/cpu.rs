@@ -21,8 +21,20 @@ impl Cpu {
         let proc = &self.current_process.as_ref().unwrap();
         // HACK: Verrrrry dirty hack here
         let tss = &mut *((&*gdt::TSS) as *const _ as *mut TaskStateSegment);
+        tss.privilege_stack_table[1] = tss.privilege_stack_table[0];
         tss.privilege_stack_table[0] = proc.kstack + 4096u64;
         self.kernel_context.switch_to(&proc.context);
+    }
+
+    pub unsafe fn switch_to_kernel(&mut self) {
+        match self.current_process.as_mut() {
+            Some(p) => {
+                let tss = &mut *((&*gdt::TSS) as *const _ as *mut TaskStateSegment);
+                tss.privilege_stack_table[0] = tss.privilege_stack_table[1];
+                p.context.switch_to(&self.kernel_context)
+            }
+            None => panic!("No process running"),
+        }
     }
 }
 

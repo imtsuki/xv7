@@ -1,6 +1,7 @@
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::fmt;
+use crossbeam_queue::ArrayQueue;
 use lazy_static::lazy_static;
 use spin::Mutex;
 
@@ -23,6 +24,12 @@ impl ConsoleDrivers {
     pub fn register(&mut self, console: Box<dyn Console + Send>) {
         self.consoles.push(console)
     }
+
+    pub fn write(&mut self, buf: &[u8]) {
+        for console in &mut self.consoles {
+            console.write(buf);
+        }
+    }
 }
 
 impl fmt::Write for ConsoleDrivers {
@@ -36,4 +43,8 @@ impl fmt::Write for ConsoleDrivers {
 
 lazy_static! {
     pub static ref CONSOLE_DRIVERS: Mutex<ConsoleDrivers> = Mutex::new(ConsoleDrivers::new());
+}
+
+lazy_static! {
+    pub static ref KEYBOARD_BUFFER: ArrayQueue<u8> = ArrayQueue::new(1024);
 }

@@ -20,6 +20,7 @@ pub mod arch;
 mod config;
 pub mod cpu;
 pub mod device;
+pub mod fs;
 #[cfg(target_arch = "x86_64")]
 mod memory;
 mod pretty;
