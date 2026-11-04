@@ -17,10 +17,11 @@ pub unsafe extern "C" fn _start() -> ! {
 
 #[cfg(not(test))]
 #[lang = "start"]
-extern "C" fn lang_start<T: crate::process::Termination + 'static>(
+fn lang_start<T: crate::process::Termination + 'static>(
     main: fn() -> T,
     _argc: isize,
     _argv: *const *const u8,
+    _sigpipe: u8,
 ) -> isize {
     let exit_code = main().report();
     exit_code as isize

@@ -14,7 +14,7 @@ pub fn init_heap() {
 
     let page_range = {
         let heap_start = VirtAddr::new(KERNEL_HEAP_BASE as u64);
-        let heap_end = heap_start + KERNEL_HEAP_SIZE - 1u64;
+        let heap_end = heap_start + KERNEL_HEAP_SIZE as u64 - 1u64;
         let heap_start_page = Page::containing_address(heap_start);
         let heap_end_page = Page::containing_address(heap_end);
         Page::range_inclusive(heap_start_page, heap_end_page)
@@ -34,6 +34,6 @@ pub fn init_heap() {
     unsafe {
         crate::allocator::ALLOCATOR
             .lock()
-            .init(KERNEL_HEAP_BASE as usize, KERNEL_HEAP_SIZE);
+            .init(KERNEL_HEAP_BASE as *mut u8, KERNEL_HEAP_SIZE);
     }
 }

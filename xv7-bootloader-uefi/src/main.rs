@@ -1,11 +1,6 @@
 #![no_std]
 #![no_main]
 #![cfg_attr(doc, allow(unused_attributes))]
-#![feature(abi_efiapi)]
-#![feature(box_patterns)]
-#![feature(box_syntax)]
-#![feature(llvm_asm)]
-#![feature(maybe_uninit_extra)]
 
 #[macro_use]
 extern crate alloc;
@@ -19,7 +14,6 @@ mod io;
 mod loader;
 mod paging;
 
-use alloc::boxed::Box;
 use core::mem::MaybeUninit;
 
 use boot::MemoryMapIter;
@@ -28,6 +22,8 @@ use boot::{BootArgs, FrameBufferDescriptor, KernelEntry, KernelEntryFn, MemoryMa
 
 use chrono::prelude::*;
 use uefi::prelude::*;
+use uefi::proto::console::gop::GraphicsOutput;
+use uefi::table::boot::MemoryType;
 use x86_64::{
     structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
@@ -39,20 +35,20 @@ static mut KERNEL_ENTRY: KernelEntry = KernelEntry(VirtAddr::new_truncate(0x0));
 static mut FRAME_BUFFER_BASE: u64 = 0x0;
 static mut FRAME_BUFFER_LEN: usize = 0x0;
 static mut RESOLUTION: (usize, usize) = (0, 0);
-static mut MMAP_ITER: MaybeUninit<MemoryMapIter> = MaybeUninit::uninit();
+static mut MMAP_ITER: MaybeUninit<MemoryMapIter<'static>> = MaybeUninit::uninit();
 
 #[entry]
-fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
-    uefi_services::init(&system_table).expect_success("Failed to initialize UEFI environment");
+fn efi_main(_image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
+    uefi::helpers::init(&mut system_table).expect("Failed to initialize UEFI environment");
     let _ = system_table.stdout().clear().unwrap();
+
+    print_system_information(&system_table).expect("Failed to print system information");
 
     let boot_services = system_table.boot_services();
 
     boot_services
         .set_watchdog_timer(0, 0x10000, None)
-        .expect_success("Could not set watchdog timer");
-
-    print_system_information(&system_table).expect_success("Failed to print system information");
+        .expect("Could not set watchdog timer");
 
     // Initialize our "kernel" frame allocator which marks frames as `MEMORY_TYPE_KERNEL`.
     let mut frame_allocator = paging::KernelFrameAllocator::new(boot_services);
@@ -68,14 +64,12 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
 
     dbg!(kernel_entry);
 
-    let mmap_size = boot_services.memory_map_size();
-    let mut mmap_buf = vec![0u8; mmap_size * 2];
-    let (_, mmap_iter) = boot_services
-        .memory_map(&mut mmap_buf)
-        .expect_success("Failed to get memory map");
+    let mmap = boot_services
+        .memory_map(MemoryType::LOADER_DATA)
+        .expect("Failed to get memory map");
 
     let max_addr = PhysAddr::new(
-        mmap_iter
+        mmap.entries()
             .map(|m| m.phys_start + m.page_count * Size4KiB::SIZE - 1)
             .max()
             .unwrap()
@@ -99,21 +93,20 @@ fn efi_main(image_handle: Handle, system_table: SystemTable<Boot>) -> Status {
 
     // Exit boot services and jump to the kernel.
     info!("Exiting UEFI boot services and jumping to the kernel");
-    let mmap_size = boot_services.memory_map_size();
-    let mmap_buf = Box::leak(vec![0u8; mmap_size * 2].into_boxed_slice());
-    let (_, mmap_iter) = system_table
-        .exit_boot_services(image_handle, mmap_buf)
-        .expect_success("UEFI exit boot services failed");
+    let (_runtime_system_table, mmap) =
+        unsafe { system_table.exit_boot_services(MemoryType::LOADER_DATA) };
 
     unsafe {
-        // FIXME: A dirty HACK to get `mmap_iter` to point to mapped memory.
-        let mut tuple: (u64, usize, usize, usize, usize) = core::mem::transmute(mmap_iter);
-        tuple.0 += PAGE_OFFSET_BASE;
-        let mmap_iter: MemoryMapIter = core::mem::transmute(tuple);
-        MMAP_ITER.write(mmap_iter);
+        let (raw_buf, meta) = mmap.as_raw();
+        let mapped_buf = core::slice::from_raw_parts(
+            (raw_buf.as_ptr() as u64 + PAGE_OFFSET_BASE) as *const u8,
+            meta.map_size,
+        );
+        let mmap_iter = MemoryMapIter::new(mapped_buf, meta.desc_size, meta.entry_count());
+        (&raw mut MMAP_ITER).write(MaybeUninit::new(mmap_iter));
 
         KERNEL_ENTRY = kernel_entry;
-        llvm_asm!("mov $0, %rsp" : : "r"(KERNEL_STACK_TOP) : "memory" : "volatile");
+        core::arch::asm!("mov rsp, {}", in(reg) KERNEL_STACK_TOP);
         // NOTICE: after we changed rsp, all local variables are no longer avaliable
         // and we must call another function immediately
         call_kernel_entry();
@@ -132,7 +125,7 @@ unsafe fn call_kernel_entry() -> ! {
             resolution: RESOLUTION,
         },
         memory_map: MemoryMap {
-            iter: MMAP_ITER.assume_init_read(),
+            iter: (&raw const MMAP_ITER).read().assume_init(),
         },
     };
     kernel_entry(&args);
@@ -152,7 +145,7 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
         system_table.firmware_revision()
     );
 
-    let now = system_table.runtime_services().get_time().log_warning()?;
+    let now = system_table.runtime_services().get_time()?;
     let now = Utc
         .ymd(now.year() as i32, now.month() as u32, now.day() as u32)
         .and_hms(now.hour() as u32, now.minute() as u32, now.second() as u32);
@@ -171,12 +164,10 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
 
     let boot_services = system_table.boot_services();
 
-    let gop = boot_services
-        .locate_protocol::<uefi::proto::console::gop::GraphicsOutput>()
-        .expect_success("");
+    let gop_handle = boot_services.get_handle_for_protocol::<GraphicsOutput>()?;
+    let mut gop = boot_services.open_protocol_exclusive::<GraphicsOutput>(gop_handle)?;
 
-    let gop = unsafe { &mut *gop.get() };
-
+    let resolution = gop.current_mode_info().resolution();
     let mut buf = gop.frame_buffer();
 
     info!("Graphic buffer: {:p}, {:#x}", buf.as_mut_ptr(), buf.size());
@@ -184,8 +175,8 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
     unsafe {
         FRAME_BUFFER_BASE = buf.as_mut_ptr() as u64;
         FRAME_BUFFER_LEN = buf.size();
-        RESOLUTION = gop.current_mode_info().resolution();
+        RESOLUTION = resolution;
     }
 
-    Ok(().into())
+    Ok(())
 }

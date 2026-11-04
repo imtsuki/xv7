@@ -43,10 +43,9 @@ impl Context {
         }
     }
 
-    #[inline(never)]
-    #[naked]
+    #[unsafe(naked)]
     pub unsafe extern "C" fn switch_to(&mut self, _next: &Context) {
-        asm!(
+        core::arch::naked_asm!(
             "
             mov rcx, cr3
             mov [rdi], rcx
@@ -86,7 +85,6 @@ impl Context {
 
             ret
             ",
-            options(noreturn)
         );
     }
 }

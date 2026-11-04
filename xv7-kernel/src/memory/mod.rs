@@ -1,5 +1,5 @@
 use boot::MemoryMap;
-pub use x86_64::structures::paging::{FrameAllocator, FrameDeallocator};
+pub use x86_64::structures::paging::FrameAllocator;
 use x86_64::structures::paging::{PageSize, Size4KiB};
 
 #[cfg(feature = "frame-allocator-bitmap")]

@@ -7,15 +7,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v1
-      - name: Install latest nightly rust toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: actions/checkout@v4
+      - name: Install nightly rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
         with:
-          toolchain: nightly
-          override: true
-      - name: Install rust-src
-        run: rustup component add rust-src
-      - name: Install cargo-make
-        run: cargo install cargo-make
+          components: rust-src, llvm-tools-preview
+          targets: x86_64-unknown-none, x86_64-unknown-uefi
       - name: Build
-        run: cargo make xbuild
+        run: make build

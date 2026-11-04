@@ -1,6 +1,5 @@
 use crate::config::*;
 use crate::pretty::Pretty;
-use bitvec::prelude::*;
 use boot::PhysAddr;
 use core::mem;
 use core::ptr;
@@ -326,8 +325,10 @@ lazy_static! {
                     length: 0,
                 }; MAX_ORDER as usize],
             };
-            DEFAULT_ZONE.head = &mut FRAMES[0];
-            Mutex::new(BuddyFrameAllocator::new(&mut DEFAULT_ZONE, &mut FRAMES))
+            let frames = &mut *(&raw mut FRAMES);
+            let default_zone = &mut *(&raw mut DEFAULT_ZONE);
+            default_zone.head = &mut frames[0];
+            Mutex::new(BuddyFrameAllocator::new(default_zone, frames))
         }
     };
 }

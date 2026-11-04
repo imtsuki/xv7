@@ -8,6 +8,8 @@ use crate::{
 };
 use alloc::vec::Vec;
 use core::sync::atomic::{AtomicUsize, Ordering};
+use x86_64::registers::rflags::RFlags;
+use x86_64::registers::segmentation::SegmentSelector;
 use x86_64::structures::idt::InterruptStackFrameValue;
 
 pub enum ProcessState {
@@ -36,7 +38,7 @@ impl Process {
         };
 
         let stack_pointer =
-            kstack + 4096usize - core::mem::size_of::<InterruptStackFrameValue>() - 8usize;
+            kstack + 4096u64 - core::mem::size_of::<InterruptStackFrameValue>() as u64 - 8u64;
 
         let mut context = Context::user(stack_pointer);
 
@@ -76,7 +78,7 @@ impl Process {
 
     fn set_context_switch_return_address(&mut self, addr: VirtAddr) {
         let stack_pointer =
-            self.kstack + 4096usize - core::mem::size_of::<InterruptStackFrameValue>() - 8usize;
+            self.kstack + 4096u64 - core::mem::size_of::<InterruptStackFrameValue>() as u64 - 8u64;
         unsafe {
             stack_pointer.as_mut_ptr::<u64>().write(addr.as_u64());
         };
@@ -90,41 +92,39 @@ impl Process {
         self.intr_stack_frame().instruction_pointer = instruction_pointer;
         self.intr_stack_frame().stack_pointer = stack_pointer;
         // FIXME: magic number
-        self.intr_stack_frame().code_segment = 0x23;
-        self.intr_stack_frame().stack_segment = 0x1b;
-        self.intr_stack_frame().cpu_flags = 0x282;
+        self.intr_stack_frame().code_segment = SegmentSelector(0x23);
+        self.intr_stack_frame().stack_segment = SegmentSelector(0x1b);
+        self.intr_stack_frame().cpu_flags = RFlags::from_bits_retain(0x282);
     }
 }
 
 impl Clone for Process {
     fn clone(&self) -> Self {
-        let mut p = Process::new();
-
-        p
+        Process::new()
     }
 }
 
-#[naked]
+#[unsafe(naked)]
 unsafe extern "C" fn interrupt_return() {
-    asm!("iretq", options(noreturn))
+    core::arch::naked_asm!("iretq")
 }
 
-#[naked]
+#[unsafe(naked)]
 unsafe extern "C" fn initcode() {
     extern "C" fn initcode_exec() {
         crate::syscall::process::exec("/init");
     }
-    asm!(
+    core::arch::naked_asm!(
         "call {}",
         "iretq",
         sym initcode_exec,
-        options(noreturn)
     )
 }
 
-#[naked]
+#[allow(dead_code)]
+#[unsafe(naked)]
 unsafe extern "C" fn fork_return() {
-    asm!("retq", options(noreturn));
+    core::arch::naked_asm!("retq");
 }
 
 pub fn my_proc() -> &'static mut Process {

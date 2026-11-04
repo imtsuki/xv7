@@ -4,23 +4,26 @@ static mut MASTER: Pic = Pic::new(0x20);
 static mut SLAVE: Pic = Pic::new(0xA0);
 
 pub unsafe fn disable_8259_pic() {
-    MASTER.cmd.write(0x11);
-    SLAVE.cmd.write(0x11);
+    let master = &mut *(&raw mut MASTER);
+    let slave = &mut *(&raw mut SLAVE);
 
-    MASTER.data.write(0x20);
-    SLAVE.data.write(0x28);
+    master.cmd.write(0x11);
+    slave.cmd.write(0x11);
 
-    MASTER.data.write(4);
-    SLAVE.data.write(2);
+    master.data.write(0x20);
+    slave.data.write(0x28);
 
-    MASTER.data.write(1);
-    SLAVE.data.write(1);
+    master.data.write(4);
+    slave.data.write(2);
 
-    MASTER.data.write(0xff);
-    SLAVE.data.write(0xff);
+    master.data.write(1);
+    slave.data.write(1);
 
-    MASTER.ack();
-    SLAVE.ack();
+    master.data.write(0xff);
+    slave.data.write(0xff);
+
+    master.ack();
+    slave.ack();
 }
 
 pub struct Pic {

@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use x86_64::instructions::segmentation::{load_ds, load_es, load_gs, load_ss, set_cs};
+use x86_64::instructions::segmentation::{Segment, CS, DS, ES, GS, SS};
 use x86_64::instructions::tables::load_tss;
 use x86_64::structures::gdt::*;
 use x86_64::structures::tss::TaskStateSegment;
@@ -8,6 +8,8 @@ use x86_64::VirtAddr;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 pub const PAGE_FAULT_IST_INDEX: u16 = 1;
+
+pub static mut TSS: TaskStateSegment = TaskStateSegment::new();
 
 lazy_static! {
     pub static ref GDT: (GlobalDescriptorTable, Selectors) = {
@@ -46,17 +48,43 @@ lazy_static! {
         };
 
         // The order is required.
-        let kernel_code_selector = gdt.add_entry(kernel_code);
+        let kernel_code_selector = gdt.append(kernel_code);
 
-        let kernel_data_selector = gdt.add_entry(kernel_data);
+        let kernel_data_selector = gdt.append(kernel_data);
 
-        let mut user_data_selector = gdt.add_entry(user_data);
+        let mut user_data_selector = gdt.append(user_data);
         user_data_selector.set_rpl(PrivilegeLevel::Ring3);
 
-        let mut user_code_selector = gdt.add_entry(user_code);
+        let mut user_code_selector = gdt.append(user_code);
         user_code_selector.set_rpl(PrivilegeLevel::Ring3);
 
-        let tss_selector = gdt.add_entry(Descriptor::tss_segment(&TSS));
+        let tss = unsafe {
+            let tss = &mut *(&raw mut TSS);
+            tss.privilege_stack_table[0] = {
+                const STACK_SIZE: usize = 4096;
+                static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+
+                let stack_start = VirtAddr::from_ptr(&raw const STACK);
+                stack_start + STACK_SIZE as u64
+            };
+            tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
+                const STACK_SIZE: usize = 4096;
+                static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+
+                let stack_start = VirtAddr::from_ptr(&raw const STACK);
+                stack_start + STACK_SIZE as u64
+            };
+            tss.interrupt_stack_table[PAGE_FAULT_IST_INDEX as usize] = {
+                const STACK_SIZE: usize = 4096;
+                static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+
+                let stack_start = VirtAddr::from_ptr(&raw const STACK);
+                stack_start + STACK_SIZE as u64
+            };
+            &*(&raw const TSS)
+        };
+
+        let tss_selector = gdt.append(Descriptor::tss_segment(tss));
 
         (
             gdt,
@@ -68,31 +96,6 @@ lazy_static! {
                 tss_selector,
             },
         )
-    };
-    pub static ref TSS: TaskStateSegment = {
-        let mut tss = TaskStateSegment::new();
-        tss.privilege_stack_table[0] = {
-            const STACK_SIZE: usize = 4096;
-            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
-
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
-            stack_start + STACK_SIZE
-        };
-        tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
-            const STACK_SIZE: usize = 4096;
-            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
-
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
-            stack_start + STACK_SIZE
-        };
-        tss.interrupt_stack_table[PAGE_FAULT_IST_INDEX as usize] = {
-            const STACK_SIZE: usize = 4096;
-            static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
-
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
-            stack_start + STACK_SIZE
-        };
-        tss
     };
 }
 
@@ -107,12 +110,12 @@ pub struct Selectors {
 pub fn init() {
     GDT.0.load();
     unsafe {
-        load_ss(GDT.1.kernel_data_selector);
-        load_ds(GDT.1.kernel_data_selector);
-        load_es(GDT.1.kernel_data_selector);
-        load_gs(GDT.1.kernel_data_selector);
+        SS::set_reg(GDT.1.kernel_data_selector);
+        DS::set_reg(GDT.1.kernel_data_selector);
+        ES::set_reg(GDT.1.kernel_data_selector);
+        GS::set_reg(GDT.1.kernel_data_selector);
 
-        set_cs(GDT.1.kernel_code_selector);
+        CS::set_reg(GDT.1.kernel_code_selector);
         load_tss(GDT.1.tss_selector);
     }
 }

@@ -1,5 +1,5 @@
 #![no_std]
-#![feature(llvm_asm)]
+#![allow(internal_features)]
 #![feature(lang_items)]
 
 #[macro_use]

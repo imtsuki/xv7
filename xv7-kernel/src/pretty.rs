@@ -3,11 +3,11 @@ use core::fmt;
 pub struct PrettyRef<'a, T>(&'a T);
 
 pub trait Pretty<T> {
-    fn pretty(&self) -> PrettyRef<T>;
+    fn pretty(&self) -> PrettyRef<'_, T>;
 }
 
 impl<T> Pretty<T> for T {
-    fn pretty(&self) -> PrettyRef<T> {
+    fn pretty(&self) -> PrettyRef<'_, T> {
         PrettyRef(self)
     }
 }

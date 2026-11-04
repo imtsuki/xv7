@@ -4,32 +4,26 @@ You can view the development notes on [the Telegram Channel](https://t.me/xv7not
 
 ## Prerequisites
 
-Install cargo-make:
-
-```bash
-cargo install cargo-make
-```
-
-Also, you should have the latest version of [QEMU](https://www.qemu.org) installed.
+You should have the latest version of [QEMU](https://www.qemu.org) installed.
 
 ## Build and Run
 
 Simply run the following command:
 
 ```bash
-cargo make qemu
+make qemu
 ```
 
 You can use KVM to speed up emulation:
 
 ```bash
-cargo make qemu-kvm
+make qemu-kvm
 ```
 
 To compose a bootable USB drive:
 
 ```bash
- cargo make compose-esp --env ESP=/path/to/your/drive
+make compose-esp ESP=/path/to/your/drive
 ```
 
 ## Tips
@@ -37,7 +31,6 @@ To compose a bootable USB drive:
 For better development experience, install these additional tools:
 
 ```bash
-rustup component add llvm-tools-preview
 cargo install cargo-binutils
 cargo install rustfilt
 ```

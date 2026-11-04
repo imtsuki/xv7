@@ -4,7 +4,7 @@ mod start;
 pub fn idle() -> ! {
     loop {
         unsafe {
-            asm!("wfe");
+            core::arch::asm!("wfe");
         }
     }
 }

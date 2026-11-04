@@ -31,9 +31,9 @@ lazy_static! {
                 .set_stack_index(super::gdt::DOUBLE_FAULT_IST_INDEX);
         }
 
-        idt[(T_IRQ0 + IRQ_TIMER) as usize].set_handler_fn(timer::handler);
-        idt[(T_IRQ0 + IRQ_KEYBOARD) as usize].set_handler_fn(keyboard::handler);
-        idt[(T_IRQ0 + IRQ_COM1) as usize].set_handler_fn(com::handler);
+        idt[T_IRQ0 + IRQ_TIMER].set_handler_fn(timer::handler);
+        idt[T_IRQ0 + IRQ_KEYBOARD].set_handler_fn(keyboard::handler);
+        idt[T_IRQ0 + IRQ_COM1].set_handler_fn(com::handler);
         idt
     };
 }
