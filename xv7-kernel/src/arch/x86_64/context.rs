@@ -1,4 +1,12 @@
+use core::mem::size_of;
+
+use x86_64::registers::rflags::RFlags;
+use x86_64::structures::idt::InterruptStackFrameValue;
+
+use super::gdt::GDT;
 use crate::paging::VirtAddr;
+
+const USER_RFLAGS: u64 = RFlags::INTERRUPT_FLAG.bits() | 0x2;
 
 #[derive(Debug)]
 #[repr(C)]
@@ -29,22 +37,46 @@ impl Context {
         }
     }
 
-    pub const fn user(stack_pointer: VirtAddr) -> Context {
+    /// Initializes a new user-process kernel stack at `kstack_top` with a reserved
+    /// `InterruptStackFrameValue` and `interrupt_return` (`iretq`) trampoline.
+    pub fn init_user(kstack_top: VirtAddr, cr3: u64) -> Context {
+        let stack_pointer = kstack_top - size_of::<InterruptStackFrameValue>() as u64 - 8u64;
+        unsafe {
+            stack_pointer
+                .as_mut_ptr::<u64>()
+                .write(interrupt_return as *const u8 as u64);
+        }
         Context {
-            cr3: 0,
-            rflags: 0x282,
-            rbx: 0,
-            r12: 0,
-            r13: 0,
-            r14: 0,
-            r15: 0,
-            rbp: 0,
+            cr3: cr3 as usize,
             rsp: stack_pointer.as_u64() as usize,
+            rflags: USER_RFLAGS as usize,
+            r15: 0,
+            r14: 0,
+            r13: 0,
+            r12: 0,
+            rbp: 0,
+            rbx: 0,
         }
     }
 
+    /// Populates the `InterruptStackFrameValue` at the top of `kstack_top` so that
+    /// `interrupt_return` (`iretq`) transitions to Ring 3 at `(instruction_pointer, stack_pointer)`.
+    pub fn set_user_return_frame(
+        kstack_top: VirtAddr,
+        instruction_pointer: VirtAddr,
+        stack_pointer: VirtAddr,
+    ) {
+        let frame_addr = kstack_top - size_of::<InterruptStackFrameValue>() as u64;
+        let frame = unsafe { &mut *frame_addr.as_mut_ptr::<InterruptStackFrameValue>() };
+        frame.instruction_pointer = instruction_pointer;
+        frame.stack_pointer = stack_pointer;
+        frame.code_segment = GDT.1.user_code_selector;
+        frame.stack_segment = GDT.1.user_data_selector;
+        frame.cpu_flags = RFlags::from_bits_retain(USER_RFLAGS);
+    }
+
     #[unsafe(naked)]
-    pub unsafe extern "C" fn switch_to(&mut self, _next: &Context) {
+    pub unsafe extern "C" fn switch_to(prev: *mut Context, next: *const Context) {
         core::arch::naked_asm!(
             "
             mov rcx, cr3
@@ -52,10 +84,10 @@ impl Context {
             mov rax, [rsi]
             cmp rax, rcx
     
-            je switch_to.same_cr3
+            je 2f
             mov cr3, rax
     
-            switch_to.same_cr3:
+            2:
             pushfq
             pop QWORD PTR [rdi + 0x10]
 
@@ -87,4 +119,9 @@ impl Context {
             ",
         );
     }
+}
+
+#[unsafe(naked)]
+unsafe extern "C" fn interrupt_return() {
+    core::arch::naked_asm!("iretq");
 }
