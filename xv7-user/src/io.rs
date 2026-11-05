@@ -20,19 +20,20 @@ pub struct Stdin;
 impl Stdin {
     pub fn read_line<'a>(&self, buf: &'a mut [u8]) -> &'a str {
         let mut idx = 0;
-        loop {
-            if idx >= buf.len() {
-                break;
-            }
-            if let Ok(n) = syscall::read(0, &mut buf[idx..idx + 1]) {
-                if n > 0 {
-                    if buf[idx] == b'\n' || buf[idx] == b'\r' {
+        while idx < buf.len() {
+            match syscall::read(0, &mut buf[idx..]) {
+                Ok(0) => break,
+                Ok(n) => {
+                    if let Some(newline_rel) = buf[idx..idx + n]
+                        .iter()
+                        .position(|&b| b == b'\n' || b == b'\r')
+                    {
+                        idx += newline_rel;
                         break;
                     }
                     idx += n;
                 }
-            } else {
-                panic!("read_line");
+                Err(_) => panic!("read_line"),
             }
         }
         core::str::from_utf8(&buf[0..idx]).unwrap()

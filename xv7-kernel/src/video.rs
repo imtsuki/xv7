@@ -7,13 +7,10 @@ use embedded_graphics::{
     prelude::*,
     text::{Baseline, Text},
 };
-use lazy_static::lazy_static;
 use spin::Mutex;
 use tinybmp::Bmp;
 
-lazy_static! {
-    pub static ref GOP_DISPLAY: Mutex<Option<GopDisplay>> = Mutex::new(None);
-}
+pub static GOP_DISPLAY: Mutex<Option<GopDisplay>> = Mutex::new(None);
 
 pub struct GopDisplay(u64, (usize, usize));
 
@@ -41,7 +38,7 @@ impl DrawTarget for GopDisplay {
                 unsafe {
                     core::ptr::write_volatile(
                         ((PAGE_OFFSET_BASE + self.0) as *mut u32).add(index as usize),
-                        ((color.r() as u32) << 16) | ((color.g() as u32) << 8) | (color.b() as u32),
+                        Self::pack_rgb(color),
                     );
                 }
             }
@@ -49,31 +46,118 @@ impl DrawTarget for GopDisplay {
         Ok(())
     }
 
-    fn clear(&mut self, _color: Rgb888) -> Result<(), ()> {
-        unsafe {
-            core::ptr::write_bytes(
-                (PAGE_OFFSET_BASE + self.0) as *mut u32,
-                0, /* FIXME: color? */
-                (self.1).0 * (self.1).1,
-            )
-        }
+    fn clear(&mut self, color: Rgb888) -> Result<(), ()> {
+        let (width, height) = self.1;
+        self.draw_solid_rect(0, 0, width, height, color);
         Ok(())
     }
 }
 
 impl GopDisplay {
-    pub fn scroll_up(&mut self, distance: usize) {
+    #[inline(always)]
+    pub fn pack_rgb(color: Rgb888) -> u32 {
+        ((color.r() as u32) << 16) | ((color.g() as u32) << 8) | (color.b() as u32)
+    }
+
+    #[inline(always)]
+    pub const fn resolution(&self) -> (usize, usize) {
+        self.1
+    }
+
+    pub fn draw_solid_rect(&mut self, x: usize, y: usize, w: usize, h: usize, color: Rgb888) {
+        self.draw_solid_rect_packed(x, y, w, h, Self::pack_rgb(color));
+    }
+
+    pub fn draw_solid_rect_packed(&mut self, x: usize, y: usize, w: usize, h: usize, pixel: u32) {
+        let (width, height) = self.1;
+        if x >= width || y >= height || w == 0 || h == 0 {
+            return;
+        }
+        let x_end = (x + w).min(width);
+        let y_end = (y + h).min(height);
+        let row_w = x_end - x;
+        let base = (PAGE_OFFSET_BASE + self.0) as *mut u32;
+
         unsafe {
-            let base = (PAGE_OFFSET_BASE + self.0) as *mut u32;
-            let (width, height) = self.1;
-            for y in 0..height - distance {
-                let dst = base.add(y * width);
-                let src = base.add((y + distance) * width);
-                core::ptr::copy_nonoverlapping(src, dst, width);
+            if pixel == 0 && x == 0 && row_w == width {
+                core::ptr::write_bytes(base.add(y * width), 0, (y_end - y) * width);
+            } else if pixel == 0 {
+                let mut ry = y;
+                while ry < y_end {
+                    core::ptr::write_bytes(base.add(ry * width + x), 0, row_w);
+                    ry += 1;
+                }
+            } else {
+                let mut ry = y;
+                while ry < y_end {
+                    let row = core::slice::from_raw_parts_mut(base.add(ry * width + x), row_w);
+                    row.fill(pixel);
+                    ry += 1;
+                }
             }
-            for y in height - distance..height {
-                let dst = base.add(y * width);
-                core::ptr::write_bytes(dst, 0, width);
+        }
+    }
+
+    pub fn scroll_up_packed(&mut self, distance: usize, clear_width: usize, bg_px: u32) {
+        let (width, height) = self.1;
+        if distance == 0 || distance >= height {
+            self.draw_solid_rect_packed(0, 0, width, height, bg_px);
+            return;
+        }
+        let base = (PAGE_OFFSET_BASE + self.0) as *mut u32;
+        unsafe {
+            core::ptr::copy(
+                base.add(distance * width),
+                base,
+                (height - distance) * width,
+            );
+        }
+        let clear_w = clear_width.min(width);
+        if clear_w > 0 {
+            self.draw_solid_rect_packed(0, height - distance, clear_w, distance, bg_px);
+        }
+    }
+
+    pub fn draw_glyph_8x16(
+        &mut self,
+        x: usize,
+        y: usize,
+        bitmap: &[u8; 13],
+        fg_px: u32,
+        bg_px: u32,
+    ) {
+        let (width, height) = self.1;
+        if x + 8 > width || y + 16 > height {
+            return;
+        }
+        let bg_row = [bg_px; 8];
+        let base = (PAGE_OFFSET_BASE + self.0) as *mut u32;
+
+        unsafe {
+            let mut ry = 0;
+            while ry < 13 {
+                let bits = bitmap[ry];
+                let dst = base.add((y + ry) * width + x) as *mut [u32; 8];
+                if bits == 0 {
+                    dst.write_volatile(bg_row);
+                } else {
+                    dst.write_volatile([
+                        if (bits & 0x80) != 0 { fg_px } else { bg_px },
+                        if (bits & 0x40) != 0 { fg_px } else { bg_px },
+                        if (bits & 0x20) != 0 { fg_px } else { bg_px },
+                        if (bits & 0x10) != 0 { fg_px } else { bg_px },
+                        if (bits & 0x08) != 0 { fg_px } else { bg_px },
+                        if (bits & 0x04) != 0 { fg_px } else { bg_px },
+                        if (bits & 0x02) != 0 { fg_px } else { bg_px },
+                        if (bits & 0x01) != 0 { fg_px } else { bg_px },
+                    ]);
+                }
+                ry += 1;
+            }
+            while ry < 16 {
+                let dst = base.add((y + ry) * width + x) as *mut [u32; 8];
+                dst.write_volatile(bg_row);
+                ry += 1;
             }
         }
     }
