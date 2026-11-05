@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 #[repr(packed)]
 pub struct ScratchRegisters {
     pub rcx: usize,
@@ -11,6 +12,7 @@ pub struct ScratchRegisters {
     pub rax: usize,
 }
 
+#[allow(dead_code)]
 #[repr(packed)]
 pub struct PreservedRegisters {
     pub r15: usize,
@@ -21,6 +23,7 @@ pub struct PreservedRegisters {
     pub rbx: usize,
 }
 
+#[allow(dead_code)]
 #[repr(packed)]
 pub struct IretRegisters {
     pub rip: usize,
@@ -30,6 +33,7 @@ pub struct IretRegisters {
     pub ss: usize,
 }
 
+#[allow(dead_code)]
 #[repr(packed)]
 pub struct SyscallStackFrame {
     pub scratch: ScratchRegisters,

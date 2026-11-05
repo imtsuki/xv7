@@ -17,7 +17,7 @@ pub mod syscall;
 pub fn idle() -> ! {
     loop {
         unsafe {
-            llvm_asm!("hlt");
+            core::arch::asm!("hlt");
         }
     }
 }

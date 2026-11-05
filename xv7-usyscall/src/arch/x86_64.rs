@@ -1,56 +1,63 @@
+use core::arch::asm;
+
 use crate::{Error, Result};
 
 pub unsafe fn syscall0(mut a: usize) -> Result<usize> {
-    llvm_asm!(
-    "syscall"
-    : "={rax}"(a)
-    : "{rax}"(a)
-    : "rcx", "r11", "memory"
-    : "volatile"
+    asm!(
+        "syscall",
+        inlateout("rax") a,
+        out("rcx") _,
+        out("r11") _,
     );
     Error::demux(a)
 }
 
 pub unsafe fn syscall1(mut a: usize, b: usize) -> Result<usize> {
-    llvm_asm!(
-    "syscall"
-    : "={rax}"(a)
-    : "{rax}"(a), "{rdi}"(b)
-    : "rcx", "r11", "memory"
-    : "volatile"
+    asm!(
+        "syscall",
+        inlateout("rax") a,
+        in("rdi") b,
+        out("rcx") _,
+        out("r11") _,
     );
     Error::demux(a)
 }
 
 pub unsafe fn syscall2(mut a: usize, b: usize, c: usize) -> Result<usize> {
-    llvm_asm!(
-    "syscall"
-    : "={rax}"(a)
-    : "{rax}"(a), "{rdi}"(b), "{rsi}"(c)
-    : "rcx", "r11", "memory"
-    : "volatile"
+    asm!(
+        "syscall",
+        inlateout("rax") a,
+        in("rdi") b,
+        in("rsi") c,
+        out("rcx") _,
+        out("r11") _,
     );
     Error::demux(a)
 }
 
 pub unsafe fn syscall3(mut a: usize, b: usize, c: usize, d: usize) -> Result<usize> {
-    llvm_asm!(
-    "syscall"
-    : "={rax}"(a)
-    : "{rax}"(a), "{rdi}"(b), "{rsi}"(c), "{rdx}"(d)
-    : "rcx", "r11", "memory"
-    : "volatile"
+    asm!(
+        "syscall",
+        inlateout("rax") a,
+        in("rdi") b,
+        in("rsi") c,
+        in("rdx") d,
+        out("rcx") _,
+        out("r11") _,
     );
     Error::demux(a)
 }
 
 pub unsafe fn syscall4(mut a: usize, b: usize, c: usize, d: usize, e: usize) -> Result<usize> {
-    llvm_asm!(
-    "syscall"
-    : "={rax}"(a)
-    : "{rax}"(a), "{rdi}"(b), "{rsi}"(c), "{rdx}"(d), "{r10}"(e)
-    : "rcx", "r11", "memory"
-    : "volatile"
+    asm!(
+        "syscall",
+        inlateout("rax") a,
+        in("rdi") b,
+        in("rsi") c,
+        in("rdx") d,
+        in("r10") e,
+        out("rcx") _,
+        out("r11") _,
     );
     Error::demux(a)
 }
@@ -63,12 +70,16 @@ pub unsafe fn syscall5(
     e: usize,
     f: usize,
 ) -> Result<usize> {
-    llvm_asm!(
-    "syscall"
-    : "={rax}"(a)
-    : "{rax}"(a), "{rdi}"(b), "{rsi}"(c), "{rdx}"(d), "{r10}"(e), "{r8}"(f)
-    : "rcx", "r11", "memory"
-    : "volatile"
+    asm!(
+        "syscall",
+        inlateout("rax") a,
+        in("rdi") b,
+        in("rsi") c,
+        in("rdx") d,
+        in("r10") e,
+        in("r8") f,
+        out("rcx") _,
+        out("r11") _,
     );
     Error::demux(a)
 }

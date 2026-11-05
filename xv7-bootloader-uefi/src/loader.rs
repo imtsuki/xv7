@@ -18,8 +18,7 @@ pub fn load_elf(
     allocator: &mut impl FrameAllocator<Size4KiB>,
     path: &str,
 ) -> KernelEntry {
-    let (len, kernel_image) =
-        read_file(services, path).expect_success("Could not load kernel image");
+    let (len, kernel_image) = read_file(services, path).expect("Could not load kernel image");
 
     dbg!(len);
 
@@ -45,7 +44,7 @@ pub fn load_elf(
             info!("page_count: {}", page_count);
             let phys_addr = services
                 .allocate_pages(AllocateType::AnyPages, MemoryType::LOADER_DATA, page_count)
-                .expect_success("Failed to allocate pages while loading kernel segment");
+                .expect("Failed to allocate pages while loading kernel segment");
 
             let dst = unsafe {
                 core::slice::from_raw_parts_mut(
@@ -74,7 +73,7 @@ pub fn load_elf(
             let start_frame = PhysFrame::containing_address(PhysAddr::new(phys_addr));
             let end_frame = PhysFrame::containing_address(
                 PhysAddr::new(phys_addr) + ph.p_vaddr - align_down(ph.p_vaddr, Size4KiB::SIZE)
-                    + dst.len()
+                    + dst.len() as u64
                     - 1u64,
             );
 

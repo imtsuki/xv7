@@ -27,7 +27,7 @@ unsafe impl<'a> FrameAllocator<Size4KiB> for KernelFrameAllocator<'a> {
         let phys_addr = self
             .0
             .allocate_pages(AllocateType::AnyPages, MemoryType::LOADER_DATA, 1)
-            .expect_success("Failed to allocate physical frame");
+            .expect("Failed to allocate physical frame");
         let phys_addr = PhysAddr::new(phys_addr);
         let phys_frame = PhysFrame::containing_address(phys_addr);
         Some(phys_frame)

@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 use crate::cpu::my_cpu;
 
 use super::controller::LOCAL_APIC;

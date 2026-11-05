@@ -1,7 +1,7 @@
 use crate::config::*;
 use crate::pretty::Pretty;
-use bitvec::prelude::*;
 use boot::PhysAddr;
+use core::cell::SyncUnsafeCell;
 use core::mem;
 use core::ptr;
 use lazy_static::lazy_static;
@@ -312,22 +312,25 @@ impl<'zone> FrameDeallocator<Size4KiB> for BuddyFrameAllocator<'zone> {
 
 lazy_static! {
     pub static ref FRAME_ALLOCATOR: Mutex<BuddyFrameAllocator<'static>> = {
-        unsafe {
-            static mut FRAMES: [BuddyFrame; MAX_FRAMES_SUPPORTED] = [BuddyFrame {
+        static FRAMES: SyncUnsafeCell<[BuddyFrame; MAX_FRAMES_SUPPORTED]> = SyncUnsafeCell::new(
+            [BuddyFrame {
                 next: ptr::null_mut(),
                 use_status: BuddyFrameStatus::UNCHECKED,
                 order: 0,
-            };
-                MAX_FRAMES_SUPPORTED];
-            static mut DEFAULT_ZONE: BuddyZone = BuddyZone {
+            }; MAX_FRAMES_SUPPORTED],
+        );
+        static DEFAULT_ZONE: SyncUnsafeCell<BuddyZone> = SyncUnsafeCell::new(BuddyZone {
+            head: ptr::null_mut(),
+            free_area: [BuddyFreeArea {
                 head: ptr::null_mut(),
-                free_area: [BuddyFreeArea {
-                    head: ptr::null_mut(),
-                    length: 0,
-                }; MAX_ORDER as usize],
-            };
-            DEFAULT_ZONE.head = &mut FRAMES[0];
-            Mutex::new(BuddyFrameAllocator::new(&mut DEFAULT_ZONE, &mut FRAMES))
+                length: 0,
+            }; MAX_ORDER as usize],
+        });
+        unsafe {
+            let frames = &mut *FRAMES.get();
+            let default_zone = &mut *DEFAULT_ZONE.get();
+            default_zone.head = &mut frames[0];
+            Mutex::new(BuddyFrameAllocator::new(default_zone, frames))
         }
     };
 }

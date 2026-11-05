@@ -4,10 +4,9 @@ use x86_64::registers::model_specific::{Efer, EferFlags, KernelGsBase, LStar, SF
 use x86_64::registers::rflags::RFlags;
 use x86_64::VirtAddr;
 
-#[naked]
-#[inline(never)]
+#[unsafe(naked)]
 pub unsafe extern "C" fn syscall_entry() {
-    asm!(
+    core::arch::naked_asm!(
         "swapgs",                     // Load kernel TSS pointer
         "mov gs:[0x1c], rsp",         // Save userspace %rsp
         "mov rsp, gs:[0x4]",          // Load TSS %rsp
@@ -58,7 +57,6 @@ pub unsafe extern "C" fn syscall_entry() {
         // interrupt return
         "iretq",
         sym syscall_inner,
-        options(noreturn),
     );
 }
 
@@ -99,14 +97,14 @@ pub fn init() {
 
     SFMask::write(mask);
 
-    KernelGsBase::write(VirtAddr::from_ptr(&*gdt::TSS as *const _));
+    KernelGsBase::write(VirtAddr::from_ptr(gdt::TSS.get()));
 
     // Enable syscall extensions
     unsafe {
         Efer::update(|efer| efer.insert(EferFlags::SYSTEM_CALL_EXTENSIONS));
     }
 
-    dbg!(&*gdt::TSS);
+    dbg!(unsafe { &*gdt::TSS.get() });
 
     dbg!(Efer::read());
     dbg!(Star::read());
