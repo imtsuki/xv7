@@ -17,15 +17,17 @@ impl LocalApic {
     }
 
     pub unsafe fn read(&self, reg: u32) -> u32 {
-        (self.base + reg as u64).as_ptr::<u32>().read_volatile()
+        unsafe { (self.base + reg as u64).as_ptr::<u32>().read_volatile() }
     }
 
     pub unsafe fn write(&mut self, reg: u32, value: u32) {
-        (self.base + reg as u64)
-            .as_mut_ptr::<u32>()
-            .write_volatile(value);
-        // Wait for completion
-        self.read(0x20);
+        unsafe {
+            (self.base + reg as u64)
+                .as_mut_ptr::<u32>()
+                .write_volatile(value);
+            // Wait for completion
+            self.read(0x20);
+        }
     }
 
     pub fn init(&mut self) {

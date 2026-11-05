@@ -1,5 +1,5 @@
-use crate::fs::vfs::Inode;
 use crate::fs::Result;
+use crate::fs::vfs::Inode;
 use alloc::sync::Arc;
 
 use super::vfs::Metadata;

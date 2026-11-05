@@ -1,11 +1,11 @@
 use super::paging;
 use crate::{
     config::*,
-    memory::{FrameAllocator, FRAME_ALLOCATOR},
+    memory::{FRAME_ALLOCATOR, FrameAllocator},
 };
+use x86_64::VirtAddr;
 use x86_64::structures::paging::{Mapper, Page};
 use x86_64::structures::paging::{OffsetPageTable, PageTableFlags};
-use x86_64::VirtAddr;
 
 pub fn init_heap() {
     let mut frame_allocator = FRAME_ALLOCATOR.lock();

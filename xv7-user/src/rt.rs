@@ -5,13 +5,13 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
     crate::syscall::exit(-1);
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn _start() -> ! {
-    extern "C" {
+    unsafe extern "C" {
         fn main(argc: isize, argv: *const *const u8) -> isize;
     }
     // TODO: setup argc and argv
-    let exit_code = main(0, 0 as *const *const u8);
+    let exit_code = unsafe { main(0, core::ptr::null()) };
     crate::syscall::exit(exit_code);
 }
 

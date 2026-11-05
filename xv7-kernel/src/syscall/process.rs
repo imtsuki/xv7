@@ -1,7 +1,7 @@
 use crate::process;
 use crate::{
     config::*,
-    memory::{FrameAllocator, FRAME_ALLOCATOR},
+    memory::{FRAME_ALLOCATOR, FrameAllocator},
 };
 use crate::{cpu::my_cpu, paging::VirtAddr};
 use goblin::elf;

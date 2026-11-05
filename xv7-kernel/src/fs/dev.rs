@@ -5,7 +5,7 @@ pub struct Console;
 impl Inode for Console {
     fn read_at(&self, _offset: usize, buf: &mut [u8]) -> super::Result<usize> {
         let mut cnt = 0;
-        while let Ok(b) = crate::device::console::KEYBOARD_BUFFER.pop() {
+        while let Some(b) = crate::device::console::KEYBOARD_BUFFER.pop() {
             if cnt >= buf.len() {
                 break;
             }

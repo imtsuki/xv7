@@ -160,9 +160,11 @@ impl<'buf> MemoryMapIter<'buf> {
                 .align_offset(core::mem::align_of::<MemoryDescriptor>()),
             0
         );
-        assert!(entry_size
-            .checked_mul(len)
-            .map_or(false, |total| total <= buffer.len()));
+        assert!(
+            entry_size
+                .checked_mul(len)
+                .map_or(false, |total| total <= buffer.len())
+        );
 
         Self {
             buffer,

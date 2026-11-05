@@ -1,12 +1,11 @@
-use uefi::prelude::*;
-use uefi::table::boot::{AllocateType, MemoryType};
+use uefi::boot::{AllocateType, MemoryType};
 use x86_64::registers::control::{Cr3, Cr3Flags, Cr4, Cr4Flags};
 use x86_64::registers::model_specific::{Efer, EferFlags};
 use x86_64::structures::paging::{
     FrameAllocator, Mapper, Page, PageSize, PageTable, PageTableFlags, PhysFrame,
     RecursivePageTable, Size2MiB, Size4KiB,
 };
-use x86_64::{align_up, PhysAddr, VirtAddr};
+use x86_64::{PhysAddr, VirtAddr, align_up};
 
 /// UEFI allows us to introduce new memory types
 /// in the 0x70000000..0xFFFFFFFF range.
@@ -14,20 +13,14 @@ use x86_64::{align_up, PhysAddr, VirtAddr};
 pub const MEMORY_TYPE_KERNEL: u32 = 0x80000000;
 
 /// This frame allocator marks frames as `MEMORY_TYPE_KERNEL`.
-pub struct KernelFrameAllocator<'a>(&'a BootServices);
+pub struct KernelFrameAllocator;
 
-impl<'a> KernelFrameAllocator<'a> {
-    pub fn new(services: &'a BootServices) -> Self {
-        Self(services)
-    }
-}
-
-unsafe impl<'a> FrameAllocator<Size4KiB> for KernelFrameAllocator<'a> {
+unsafe impl FrameAllocator<Size4KiB> for KernelFrameAllocator {
     fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
-        let phys_addr = self
-            .0
-            .allocate_pages(AllocateType::AnyPages, MemoryType::LOADER_DATA, 1)
-            .expect("Failed to allocate physical frame");
+        let phys_addr =
+            uefi::boot::allocate_pages(AllocateType::AnyPages, MemoryType::LOADER_DATA, 1)
+                .expect("Failed to allocate physical frame")
+                .as_ptr() as u64;
         let phys_addr = PhysAddr::new(phys_addr);
         let phys_frame = PhysFrame::containing_address(phys_addr);
         Some(phys_frame)

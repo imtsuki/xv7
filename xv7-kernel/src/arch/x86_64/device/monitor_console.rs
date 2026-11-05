@@ -2,12 +2,12 @@ use crate::ansi;
 use crate::ansi::C0;
 use crate::device::console::Console;
 use crate::video::GOP_DISPLAY;
-use embedded_graphics::style::TextStyleBuilder;
 use embedded_graphics::{
-    fonts::{Font8x16, Text},
+    mono_font::{MonoTextStyleBuilder, iso_8859_1::FONT_8X13},
     prelude::*,
+    text::{Baseline, Text},
 };
-use vte::{Parser, Perform};
+use vte::{Params, Parser, Perform};
 
 struct Performer {
     pos: (usize, usize),
@@ -41,9 +41,7 @@ impl MonitorConsole {
 
 impl Console for MonitorConsole {
     fn write(&mut self, buf: &[u8]) {
-        for byte in buf {
-            self.parser.advance(&mut self.performer, *byte);
-        }
+        self.parser.advance(&mut self.performer, buf);
     }
 }
 
@@ -88,21 +86,26 @@ impl Performer {
     }
 }
 
-impl vte::Perform for Performer {
+impl Perform for Performer {
     fn print(&mut self, c: char) {
         if let Some(display) = &mut *GOP_DISPLAY.lock() {
             let (line, col) = self.pos;
 
             let mut buf = [0; 4];
             let result = c.encode_utf8(&mut buf);
-            let style = TextStyleBuilder::new(Font8x16)
+            let style = MonoTextStyleBuilder::new()
+                .font(&FONT_8X13)
                 .text_color(RgbColor::WHITE)
                 .background_color(RgbColor::BLACK)
                 .build();
-            Text::new(result, Point::new(col as i32 * 8, line as i32 * 16))
-                .into_styled(style)
-                .draw(display)
-                .ok();
+            Text::with_baseline(
+                result,
+                Point::new(col as i32 * 8, line as i32 * 16),
+                style,
+                Baseline::Top,
+            )
+            .draw(display)
+            .ok();
         }
         self.next_char();
     }
@@ -115,7 +118,7 @@ impl vte::Perform for Performer {
         }
     }
 
-    fn hook(&mut self, _params: &[i64], _intermediates: &[u8], _ignore: bool, _action: char) {
+    fn hook(&mut self, _params: &Params, _intermediates: &[u8], _ignore: bool, _action: char) {
         /* UNHANDLED */
     }
 
@@ -131,9 +134,15 @@ impl vte::Perform for Performer {
         /* TODO */
     }
 
-    fn csi_dispatch(&mut self, _params: &[i64], intermediates: &[u8], _ignore: bool, action: char) {
+    fn csi_dispatch(
+        &mut self,
+        _params: &Params,
+        intermediates: &[u8],
+        _ignore: bool,
+        action: char,
+    ) {
         if let Some(display) = &mut *GOP_DISPLAY.lock() {
-            match (action, intermediates.get(0)) {
+            match (action, intermediates.first()) {
                 (ansi::ED, None) => {
                     display.clear(RgbColor::BLACK).unwrap();
                 }

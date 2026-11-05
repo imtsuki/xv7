@@ -10,7 +10,7 @@ use x86_64::structures::paging::{PageSize, PhysFrame, Size4KiB};
 
 pub struct BitmapFrameAllocator<'map> {
     #[allow(unused)]
-    inner: &'map mut BitSlice<Lsb0, u8>,
+    inner: &'map mut BitSlice<u8, Lsb0>,
 }
 
 impl<'map> BitmapFrameAllocator<'map> {

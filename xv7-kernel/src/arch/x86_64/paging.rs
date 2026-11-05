@@ -33,7 +33,7 @@ pub unsafe fn active_page_table() -> &'static mut PageTable {
     let virt = PAGE_OFFSET_BASE + phys.as_u64();
     let page_table_ptr: *mut PageTable = virt as *mut _;
 
-    &mut *page_table_ptr
+    unsafe { &mut *page_table_ptr }
 }
 
 pub struct AddressSpace {
@@ -68,6 +68,6 @@ impl AddressSpace {
         let virt = PAGE_OFFSET_BASE + phys.as_u64();
         let page_table_ptr: *mut PageTable = virt as *mut _;
 
-        &mut *page_table_ptr
+        unsafe { &mut *page_table_ptr }
     }
 }

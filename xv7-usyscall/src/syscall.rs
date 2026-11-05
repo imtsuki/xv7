@@ -1,6 +1,6 @@
+use crate::Result;
 use crate::arch::*;
 use crate::number::*;
-use crate::Result;
 
 pub fn exit(code: isize) -> ! {
     unsafe {

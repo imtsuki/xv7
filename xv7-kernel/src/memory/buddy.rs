@@ -78,34 +78,38 @@ struct BuddyZone {
 
 impl BuddyFreeArea {
     unsafe fn drop_frame(&mut self, frame: *mut BuddyFrame) -> *mut BuddyFrame {
-        let mut next = self.head;
-        let mut pre = ptr::null_mut();
-        while !next.is_null() && next != frame {
-            pre = next;
-            next = (*next).next;
-        }
-        if next.is_null() {
-            return ptr::null_mut();
-        }
-        self.length -= 1;
-        let next = (*frame).next;
+        unsafe {
+            let mut next = self.head;
+            let mut pre = ptr::null_mut();
+            while !next.is_null() && next != frame {
+                pre = next;
+                next = (*next).next;
+            }
+            if next.is_null() {
+                return ptr::null_mut();
+            }
+            self.length -= 1;
+            let next = (*frame).next;
 
-        if !pre.is_null() {
-            (*pre).next = next;
-        } else {
-            // head
-            self.head = next;
+            if !pre.is_null() {
+                (*pre).next = next;
+            } else {
+                // head
+                self.head = next;
+            }
+            (*frame).next = ptr::null_mut();
+            (*frame).use_status = BuddyFrameStatus::NOTUSED;
+            return frame;
         }
-        (*frame).next = ptr::null_mut();
-        (*frame).use_status = BuddyFrameStatus::NOTUSED;
-        return frame;
     }
 
     unsafe fn push_frame(&mut self, frame: *mut BuddyFrame) {
-        self.length += 1;
-        (*frame).next = self.head;
-        self.head = frame;
-        (*frame).use_status = BuddyFrameStatus::NOTUSED;
+        unsafe {
+            self.length += 1;
+            (*frame).next = self.head;
+            self.head = frame;
+            (*frame).use_status = BuddyFrameStatus::NOTUSED;
+        }
     }
 
     unsafe fn pop_frame(&mut self) -> *mut BuddyFrame {
@@ -114,9 +118,11 @@ impl BuddyFreeArea {
         }
         self.length -= 1;
         let head = self.head;
-        self.head = (*head).next;
-        (*head).next = ptr::null_mut();
-        (*head).use_status = BuddyFrameStatus::USED;
+        unsafe {
+            self.head = (*head).next;
+            (*head).next = ptr::null_mut();
+            (*head).use_status = BuddyFrameStatus::USED;
+        }
         return head;
     }
 }
@@ -131,6 +137,8 @@ impl BuddyZone {
     }
 }
 
+unsafe impl Sync for BuddyFrame {}
+unsafe impl Sync for BuddyZone {}
 unsafe impl<'zone> Send for BuddyFrameAllocator<'zone> {}
 
 impl<'zone> BuddyFrameAllocator<'zone> {
@@ -157,7 +165,7 @@ impl<'zone> BuddyFrameAllocator<'zone> {
     }
 
     unsafe fn free_frame_range(&mut self, index_l: usize, index_r: usize) {
-        self.free_frame_range_top_down(index_l, index_r, MAX_ORDER - 1)
+        unsafe { self.free_frame_range_top_down(index_l, index_r, MAX_ORDER - 1) }
     }
 
     unsafe fn free_frame_range_top_down(&mut self, index_l: usize, index_r: usize, order: u8) {
@@ -169,14 +177,16 @@ impl<'zone> BuddyFrameAllocator<'zone> {
 
         let align_index_l: usize = align_to_upper!(index_l, block_size);
         let align_index_r: usize = align_to_lower!(index_r, block_size);
-        if align_index_l <= align_index_r {
-            self.free_frame_range_top_down(index_l, align_index_l, order.wrapping_sub(1));
-            for frame_index in (align_index_l..align_index_r).step_by(1 << order) {
-                self.free_frame_specific_order(frame_index, order);
+        unsafe {
+            if align_index_l <= align_index_r {
+                self.free_frame_range_top_down(index_l, align_index_l, order.wrapping_sub(1));
+                for frame_index in (align_index_l..align_index_r).step_by(1 << order) {
+                    self.free_frame_specific_order(frame_index, order);
+                }
+                self.free_frame_range_top_down(align_index_r, index_r, order.wrapping_sub(1));
+            } else {
+                self.free_frame_range_top_down(index_l, index_r, order.wrapping_sub(1));
             }
-            self.free_frame_range_top_down(align_index_r, index_r, order.wrapping_sub(1));
-        } else {
-            self.free_frame_range_top_down(index_l, index_r, order.wrapping_sub(1));
         }
     }
 
@@ -199,7 +209,7 @@ impl<'zone> BuddyFrameAllocator<'zone> {
             }
             let area = &mut self.zone.free_area[order as usize];
             let buddy_index = get_buddy!(frame_index, order);
-            let buddy_frame = area.drop_frame(&mut self.frames[buddy_index]);
+            let buddy_frame = unsafe { area.drop_frame(&mut self.frames[buddy_index]) };
             if !buddy_frame.is_null() {
                 frame_index = if frame_index < buddy_index {
                     frame_index
@@ -220,7 +230,9 @@ impl<'zone> BuddyFrameAllocator<'zone> {
         );
 
         self.frames[frame_index].order = order;
-        self.zone.free_area[order as usize].push_frame(&mut self.frames[frame_index]);
+        unsafe {
+            self.zone.free_area[order as usize].push_frame(&mut self.frames[frame_index]);
+        }
     }
 
     unsafe fn alloc_frame_specific_order(&mut self, order: u8) -> *mut BuddyFrame {
@@ -231,17 +243,19 @@ impl<'zone> BuddyFrameAllocator<'zone> {
         if upper_order >= MAX_ORDER {
             return ptr::null_mut(); // alloc failed, not enough space
         }
-        let large_frame = self.zone.free_area[upper_order as usize].pop_frame();
-        while upper_order > order {
-            let offset = (1 << (upper_order - 1)) + self.index_of_frame(large_frame);
-            self.frames[offset].order = upper_order - 1;
-            self.zone.free_area[(upper_order - 1) as usize]
-                .push_frame(&mut self.frames[offset] as *mut BuddyFrame);
-            upper_order -= 1;
+        unsafe {
+            let large_frame = self.zone.free_area[upper_order as usize].pop_frame();
+            while upper_order > order {
+                let offset = (1 << (upper_order - 1)) + self.index_of_frame(large_frame);
+                self.frames[offset].order = upper_order - 1;
+                self.zone.free_area[(upper_order - 1) as usize]
+                    .push_frame(&mut self.frames[offset] as *mut BuddyFrame);
+                upper_order -= 1;
+            }
+            (*large_frame).use_status = BuddyFrameStatus::USED;
+            (*large_frame).order = order;
+            return large_frame;
         }
-        (*large_frame).use_status = BuddyFrameStatus::USED;
-        (*large_frame).order = order;
-        return large_frame;
     }
 
     pub unsafe fn check_bugs(&mut self) {
@@ -251,7 +265,7 @@ impl<'zone> BuddyFrameAllocator<'zone> {
             let mut j = 0;
             let mut cur = area.head;
             while !cur.is_null() {
-                let next = (*cur).next;
+                let next = unsafe { (*cur).next };
                 let offset = self.index_of_frame(cur);
                 assert_eq!(
                     offset,
@@ -274,7 +288,9 @@ impl<'zone> BuddyFrameAllocator<'zone> {
 
     #[allow(unused)]
     pub unsafe fn print_statistics(&mut self) {
-        self.check_bugs();
+        unsafe {
+            self.check_bugs();
+        }
         let free_mem_count = self.zone.count_free_mem();
         println!(
             "BuddyFrameAllocator: {} frames available, which is {} of memory",
@@ -306,7 +322,9 @@ unsafe impl<'zone> FrameAllocator<Size4KiB> for BuddyFrameAllocator<'zone> {
 impl<'zone> FrameDeallocator<Size4KiB> for BuddyFrameAllocator<'zone> {
     unsafe fn deallocate_frame(&mut self, frame: PhysFrame<Size4KiB>) {
         let index = frame.start_address().as_u64() / Size4KiB::SIZE;
-        self.free_frame_specific_order(index as usize, 0);
+        unsafe {
+            self.free_frame_specific_order(index as usize, 0);
+        }
     }
 }
 

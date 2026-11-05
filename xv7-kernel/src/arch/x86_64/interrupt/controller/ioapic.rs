@@ -21,13 +21,17 @@ impl IoApic {
 
     #[allow(unused)]
     pub unsafe fn read(&mut self, reg: u8) -> u32 {
-        self.sel.write_volatile(reg as u32);
-        self.data.read_volatile()
+        unsafe {
+            self.sel.write_volatile(reg as u32);
+            self.data.read_volatile()
+        }
     }
 
     pub unsafe fn write(&mut self, reg: u8, data: u32) {
-        self.sel.write_volatile(reg as u32);
-        self.data.write_volatile(data);
+        unsafe {
+            self.sel.write_volatile(reg as u32);
+            self.data.write_volatile(data);
+        }
     }
 
     pub fn write_irq(&mut self, irq: u8, flags: u32, apic_id: u8) {

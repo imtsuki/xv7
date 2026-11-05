@@ -1,7 +1,12 @@
 use crate::config::PAGE_OFFSET_BASE;
 use boot::BootArgs;
-use embedded_graphics::{egtext, text_style};
-use embedded_graphics::{fonts::Font8x16, image::Image, pixelcolor::Rgb888, prelude::*};
+use embedded_graphics::{
+    image::Image,
+    mono_font::{MonoTextStyle, iso_8859_1::FONT_8X13},
+    pixelcolor::Rgb888,
+    prelude::*,
+    text::{Baseline, Text},
+};
 use lazy_static::lazy_static;
 use spin::Mutex;
 use tinybmp::Bmp;
@@ -12,27 +17,36 @@ lazy_static! {
 
 pub struct GopDisplay(u64, (usize, usize));
 
-impl DrawTarget<Rgb888> for GopDisplay {
-    type Error = ();
-
-    #[inline(always)]
-    fn draw_pixel(&mut self, pixel: Pixel<Rgb888>) -> Result<(), ()> {
-        let Pixel(coord, color) = pixel;
-        let index = self.size().width as i32 * coord.y + coord.x;
-
-        unsafe {
-            core::ptr::write_volatile(
-                ((PAGE_OFFSET_BASE + self.0) as *mut u32).add(index as usize),
-                ((color.r() as u32) << 16) | ((color.g() as u32) << 8) | (color.b() as u32),
-            );
-        }
-
-        Ok(())
-    }
-
+impl OriginDimensions for GopDisplay {
     #[inline(always)]
     fn size(&self) -> Size {
         Size::new((self.1).0 as u32, (self.1).1 as u32)
+    }
+}
+
+impl DrawTarget for GopDisplay {
+    type Color = Rgb888;
+    type Error = ();
+
+    #[inline(always)]
+    fn draw_iter<I>(&mut self, pixels: I) -> Result<(), Self::Error>
+    where
+        I: IntoIterator<Item = Pixel<Self::Color>>,
+    {
+        let Size { width, height } = self.size();
+        for Pixel(coord, color) in pixels {
+            if coord.x >= 0 && coord.y >= 0 && (coord.x as u32) < width && (coord.y as u32) < height
+            {
+                let index = width as i32 * coord.y + coord.x;
+                unsafe {
+                    core::ptr::write_volatile(
+                        ((PAGE_OFFSET_BASE + self.0) as *mut u32).add(index as usize),
+                        ((color.r() as u32) << 16) | ((color.g() as u32) << 8) | (color.b() as u32),
+                    );
+                }
+            }
+        }
+        Ok(())
     }
 
     fn clear(&mut self, _color: Rgb888) -> Result<(), ()> {
@@ -77,23 +91,25 @@ pub fn splash_screen() {
     if let Some(display) = &mut *GOP_DISPLAY.lock() {
         display.clear(RgbColor::WHITE).unwrap();
 
-        let img = Bmp::from_slice(include_bytes!("../resources/logo.bmp")).unwrap();
+        let img = Bmp::<Rgb888>::from_slice(include_bytes!("../resources/logo.bmp")).unwrap();
         let logo = Image::new(&img, Point::zero());
 
         logo.translate(
             (
-                (display.size().width - img.width()) as i32 / 2,
-                (display.size().height - img.height()) as i32 / 2,
+                (display.size().width - img.size().width) as i32 / 2,
+                (display.size().height - img.size().height) as i32 / 2,
             )
                 .into(),
         )
         .draw(display)
         .unwrap();
 
-        egtext!(
-            text = "XV7: Yet Another Operating System by imtsuki",
-            top_left = (100, 100),
-            style = text_style!(font = Font8x16, text_color = RgbColor::BLACK)
+        let style = MonoTextStyle::new(&FONT_8X13, RgbColor::BLACK);
+        Text::with_baseline(
+            "XV7: Yet Another Operating System by imtsuki",
+            Point::new(100, 100),
+            style,
+            Baseline::Top,
         )
         .draw(display)
         .unwrap();

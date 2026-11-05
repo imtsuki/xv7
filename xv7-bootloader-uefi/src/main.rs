@@ -18,17 +18,19 @@ mod paging;
 use core::cell::SyncUnsafeCell;
 use core::mem::MaybeUninit;
 
-use boot::MemoryMapIter;
 use boot::BOOT_ARGS_MAGIC;
+use boot::MemoryMapIter;
 use boot::{BootArgs, FrameBufferDescriptor, MemoryMap};
 
 use chrono::prelude::*;
-use uefi::prelude::*;
+use uefi::boot::MemoryType;
+use uefi::mem::memory_map::MemoryMap as _;
 use uefi::proto::console::gop::GraphicsOutput;
-use uefi::table::boot::MemoryType;
+use uefi::table::cfg::ConfigTableEntry;
+use uefi::{Status, entry};
 use x86_64::{
-    structures::paging::{PageSize, Size4KiB},
     PhysAddr, VirtAddr,
+    structures::paging::{PageSize, Size4KiB},
 };
 
 use config::*;
@@ -37,26 +39,20 @@ static BOOT_ARGS: SyncUnsafeCell<MaybeUninit<BootArgs>> =
     SyncUnsafeCell::new(MaybeUninit::uninit());
 
 #[entry]
-fn efi_main(_image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
-    uefi::helpers::init(&mut system_table).expect("Failed to initialize UEFI environment");
-    let _ = system_table.stdout().clear().unwrap();
+fn efi_main() -> Status {
+    uefi::helpers::init().expect("Failed to initialize UEFI environment");
+    uefi::system::with_stdout(|stdout| stdout.clear()).unwrap();
 
-    let frame_buffer =
-        print_system_information(&system_table).expect("Failed to print system information");
+    let frame_buffer = print_system_information().expect("Failed to print system information");
 
-    let boot_services = system_table.boot_services();
-
-    boot_services
-        .set_watchdog_timer(0, 0x10000, None)
-        .expect("Could not set watchdog timer");
+    uefi::boot::set_watchdog_timer(0, 0x10000, None).expect("Could not set watchdog timer");
 
     // Initialize our "kernel" frame allocator which marks frames as `MEMORY_TYPE_KERNEL`.
-    let mut frame_allocator = paging::KernelFrameAllocator::new(boot_services);
+    let mut frame_allocator = paging::KernelFrameAllocator;
 
     let mut page_table = paging::init_recursive(&mut frame_allocator);
     // load kernel ELF image.
     let kernel_entry = loader::load_elf(
-        boot_services,
         &mut page_table,
         &mut frame_allocator,
         dbg!(KERNEL_IMAGE_PATH),
@@ -64,9 +60,7 @@ fn efi_main(_image_handle: Handle, mut system_table: SystemTable<Boot>) -> Statu
 
     dbg!(kernel_entry);
 
-    let mmap = boot_services
-        .memory_map(MemoryType::LOADER_DATA)
-        .expect("Failed to get memory map");
+    let mmap = uefi::boot::memory_map(MemoryType::LOADER_DATA).expect("Failed to get memory map");
 
     let max_addr = PhysAddr::new(
         mmap.entries()
@@ -93,16 +87,16 @@ fn efi_main(_image_handle: Handle, mut system_table: SystemTable<Boot>) -> Statu
 
     // Exit boot services and jump to the kernel.
     info!("Exiting UEFI boot services and jumping to the kernel");
-    let (_runtime_system_table, mmap) =
-        unsafe { system_table.exit_boot_services(MemoryType::LOADER_DATA) };
+    let mmap = unsafe { uefi::boot::exit_boot_services(Some(MemoryType::LOADER_DATA)) };
 
     unsafe {
-        let (raw_buf, meta) = mmap.as_raw();
+        let raw_buf = mmap.buffer();
+        let meta = mmap.meta();
         let mapped_buf = core::slice::from_raw_parts(
             (raw_buf.as_ptr() as u64 + PAGE_OFFSET_BASE) as *const u8,
-            meta.map_size,
+            raw_buf.len(),
         );
-        let mmap_iter = MemoryMapIter::new(mapped_buf, meta.desc_size, meta.entry_count());
+        let mmap_iter = MemoryMapIter::new(mapped_buf, meta.desc_size, mmap.len());
 
         (*BOOT_ARGS.get()).write(BootArgs {
             magic: BOOT_ARGS_MAGIC,
@@ -122,9 +116,7 @@ fn efi_main(_image_handle: Handle, mut system_table: SystemTable<Boot>) -> Statu
     }
 }
 
-fn print_system_information(
-    system_table: &SystemTable<Boot>,
-) -> uefi::Result<FrameBufferDescriptor> {
+fn print_system_information() -> uefi::Result<FrameBufferDescriptor> {
     info!(
         "{} v{}",
         env!("CARGO_PKG_DESCRIPTION"),
@@ -134,31 +126,38 @@ fn print_system_information(
 
     info!(
         "UEFI Firmware {} {:#?}",
-        system_table.firmware_vendor(),
-        system_table.firmware_revision()
+        uefi::system::firmware_vendor(),
+        uefi::system::firmware_revision()
     );
 
-    let now = system_table.runtime_services().get_time()?;
+    let now = uefi::runtime::get_time()?;
     let now = Utc
-        .ymd(now.year() as i32, now.month() as u32, now.day() as u32)
-        .and_hms(now.hour() as u32, now.minute() as u32, now.second() as u32);
+        .with_ymd_and_hms(
+            now.year() as i32,
+            now.month() as u32,
+            now.day() as u32,
+            now.hour() as u32,
+            now.minute() as u32,
+            now.second() as u32,
+        )
+        .unwrap();
     info!("TimeZone Bupt/Jwxt: {}", now);
 
-    let now = now.with_timezone(&FixedOffset::east(8 * 3600));
+    let now = now.with_timezone(&FixedOffset::east_opt(8 * 3600).unwrap());
     info!("TimeZone Asia/Shanghai: {}", now);
 
-    for e in system_table.config_table() {
-        if e.guid == uefi::table::cfg::SMBIOS_GUID {
-            let addr = e.address;
-            let smbios = unsafe { *(addr as *const boot::SmbiosEntryPoint) };
-            debug!("{:?}", smbios);
+    uefi::system::with_config_table(|config_table| {
+        for e in config_table {
+            if e.guid == ConfigTableEntry::SMBIOS_GUID {
+                let addr = e.address;
+                let smbios = unsafe { *(addr as *const boot::SmbiosEntryPoint) };
+                debug!("{:?}", smbios);
+            }
         }
-    }
+    });
 
-    let boot_services = system_table.boot_services();
-
-    let gop_handle = boot_services.get_handle_for_protocol::<GraphicsOutput>()?;
-    let mut gop = boot_services.open_protocol_exclusive::<GraphicsOutput>(gop_handle)?;
+    let gop_handle = uefi::boot::get_handle_for_protocol::<GraphicsOutput>()?;
+    let mut gop = uefi::boot::open_protocol_exclusive::<GraphicsOutput>(gop_handle)?;
 
     let resolution = gop.current_mode_info().resolution();
     let mut buf = gop.frame_buffer();
