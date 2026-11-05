@@ -1,11 +1,8 @@
 use x86_64::instructions::port::Port;
 
-static mut MASTER: Pic = Pic::new(0x20);
-static mut SLAVE: Pic = Pic::new(0xA0);
-
 pub unsafe fn disable_8259_pic() {
-    let master = &mut *(&raw mut MASTER);
-    let slave = &mut *(&raw mut SLAVE);
+    let mut master = Pic::new(0x20);
+    let mut slave = Pic::new(0xA0);
 
     master.cmd.write(0x11);
     slave.cmd.write(0x11);

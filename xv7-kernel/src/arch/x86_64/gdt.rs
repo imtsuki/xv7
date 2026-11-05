@@ -1,3 +1,4 @@
+use core::cell::SyncUnsafeCell;
 use lazy_static::lazy_static;
 use x86_64::instructions::segmentation::{Segment, CS, DS, ES, GS, SS};
 use x86_64::instructions::tables::load_tss;
@@ -9,7 +10,7 @@ use x86_64::VirtAddr;
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 pub const PAGE_FAULT_IST_INDEX: u16 = 1;
 
-pub static mut TSS: TaskStateSegment = TaskStateSegment::new();
+pub static TSS: SyncUnsafeCell<TaskStateSegment> = SyncUnsafeCell::new(TaskStateSegment::new());
 
 lazy_static! {
     pub static ref GDT: (GlobalDescriptorTable, Selectors) = {
@@ -59,29 +60,32 @@ lazy_static! {
         user_code_selector.set_rpl(PrivilegeLevel::Ring3);
 
         let tss = unsafe {
-            let tss = &mut *(&raw mut TSS);
+            let tss = &mut *TSS.get();
             tss.privilege_stack_table[0] = {
                 const STACK_SIZE: usize = 4096;
-                static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+                static STACK: SyncUnsafeCell<[u8; STACK_SIZE]> =
+                    SyncUnsafeCell::new([0; STACK_SIZE]);
 
-                let stack_start = VirtAddr::from_ptr(&raw const STACK);
+                let stack_start = VirtAddr::from_ptr(STACK.get());
                 stack_start + STACK_SIZE as u64
             };
             tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
                 const STACK_SIZE: usize = 4096;
-                static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+                static STACK: SyncUnsafeCell<[u8; STACK_SIZE]> =
+                    SyncUnsafeCell::new([0; STACK_SIZE]);
 
-                let stack_start = VirtAddr::from_ptr(&raw const STACK);
+                let stack_start = VirtAddr::from_ptr(STACK.get());
                 stack_start + STACK_SIZE as u64
             };
             tss.interrupt_stack_table[PAGE_FAULT_IST_INDEX as usize] = {
                 const STACK_SIZE: usize = 4096;
-                static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
+                static STACK: SyncUnsafeCell<[u8; STACK_SIZE]> =
+                    SyncUnsafeCell::new([0; STACK_SIZE]);
 
-                let stack_start = VirtAddr::from_ptr(&raw const STACK);
+                let stack_start = VirtAddr::from_ptr(STACK.get());
                 stack_start + STACK_SIZE as u64
             };
-            &*(&raw const TSS)
+            &*TSS.get()
         };
 
         let tss_selector = gdt.append(Descriptor::tss_segment(tss));

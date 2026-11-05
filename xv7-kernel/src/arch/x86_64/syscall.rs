@@ -97,14 +97,14 @@ pub fn init() {
 
     SFMask::write(mask);
 
-    KernelGsBase::write(VirtAddr::from_ptr(&raw const gdt::TSS));
+    KernelGsBase::write(VirtAddr::from_ptr(gdt::TSS.get()));
 
     // Enable syscall extensions
     unsafe {
         Efer::update(|efer| efer.insert(EferFlags::SYSTEM_CALL_EXTENSIONS));
     }
 
-    dbg!(unsafe { &*(&raw const gdt::TSS) });
+    dbg!(unsafe { &*gdt::TSS.get() });
 
     dbg!(Efer::read());
     dbg!(Star::read());

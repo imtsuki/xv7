@@ -2,6 +2,7 @@ use crate::config::*;
 use crate::pretty::Pretty;
 use bitvec::prelude::*;
 use boot::PhysAddr;
+use core::cell::SyncUnsafeCell;
 use lazy_static::lazy_static;
 use spin::Mutex;
 pub use x86_64::structures::paging::{FrameAllocator, FrameDeallocator};
@@ -81,7 +82,8 @@ impl<'map> FrameDeallocator<Size4KiB> for BitmapFrameAllocator<'map> {
 
 lazy_static! {
     pub static ref FRAME_ALLOCATOR: Mutex<BitmapFrameAllocator<'static>> = {
-        static mut MAP: [u8; MAX_FRAMES_SUPPORTED / 8] = [0; MAX_FRAMES_SUPPORTED / 8];
-        Mutex::new(BitmapFrameAllocator::new(unsafe { &mut *(&raw mut MAP) }))
+        static MAP: SyncUnsafeCell<[u8; MAX_FRAMES_SUPPORTED / 8]> =
+            SyncUnsafeCell::new([0; MAX_FRAMES_SUPPORTED / 8]);
+        Mutex::new(BitmapFrameAllocator::new(unsafe { &mut *MAP.get() }))
     };
 }

@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 #![cfg_attr(doc, allow(unused_attributes))]
+#![feature(sync_unsafe_cell)]
 
 #[macro_use]
 extern crate alloc;
@@ -14,11 +15,12 @@ mod io;
 mod loader;
 mod paging;
 
+use core::cell::SyncUnsafeCell;
 use core::mem::MaybeUninit;
 
 use boot::MemoryMapIter;
 use boot::BOOT_ARGS_MAGIC;
-use boot::{BootArgs, FrameBufferDescriptor, KernelEntry, KernelEntryFn, MemoryMap};
+use boot::{BootArgs, FrameBufferDescriptor, MemoryMap};
 
 use chrono::prelude::*;
 use uefi::prelude::*;
@@ -31,18 +33,16 @@ use x86_64::{
 
 use config::*;
 
-static mut KERNEL_ENTRY: KernelEntry = KernelEntry(VirtAddr::new_truncate(0x0));
-static mut FRAME_BUFFER_BASE: u64 = 0x0;
-static mut FRAME_BUFFER_LEN: usize = 0x0;
-static mut RESOLUTION: (usize, usize) = (0, 0);
-static mut MMAP_ITER: MaybeUninit<MemoryMapIter<'static>> = MaybeUninit::uninit();
+static BOOT_ARGS: SyncUnsafeCell<MaybeUninit<BootArgs>> =
+    SyncUnsafeCell::new(MaybeUninit::uninit());
 
 #[entry]
 fn efi_main(_image_handle: Handle, mut system_table: SystemTable<Boot>) -> Status {
     uefi::helpers::init(&mut system_table).expect("Failed to initialize UEFI environment");
     let _ = system_table.stdout().clear().unwrap();
 
-    print_system_information(&system_table).expect("Failed to print system information");
+    let frame_buffer =
+        print_system_information(&system_table).expect("Failed to print system information");
 
     let boot_services = system_table.boot_services();
 
@@ -103,35 +103,28 @@ fn efi_main(_image_handle: Handle, mut system_table: SystemTable<Boot>) -> Statu
             meta.map_size,
         );
         let mmap_iter = MemoryMapIter::new(mapped_buf, meta.desc_size, meta.entry_count());
-        (&raw mut MMAP_ITER).write(MaybeUninit::new(mmap_iter));
 
-        KERNEL_ENTRY = kernel_entry;
-        core::arch::asm!("mov rsp, {}", in(reg) KERNEL_STACK_TOP);
-        // NOTICE: after we changed rsp, all local variables are no longer avaliable
-        // and we must call another function immediately
-        call_kernel_entry();
+        (*BOOT_ARGS.get()).write(BootArgs {
+            magic: BOOT_ARGS_MAGIC,
+            frame_buffer,
+            memory_map: MemoryMap { iter: mmap_iter },
+        });
+
+        let args_ptr = (BOOT_ARGS.get() as u64 + PAGE_OFFSET_BASE) as *const BootArgs;
+        core::arch::asm!(
+            "mov rsp, {stack}",
+            "call {entry}",
+            stack = in(reg) KERNEL_STACK_TOP,
+            entry = in(reg) kernel_entry.0.as_u64(),
+            in("rdi") args_ptr,
+            options(noreturn),
+        );
     }
 }
 
-/// This function runs on new kernel stack.
-unsafe fn call_kernel_entry() -> ! {
-    use core::mem;
-    let kernel_entry: KernelEntryFn = mem::transmute(KERNEL_ENTRY);
-    let args = BootArgs {
-        magic: BOOT_ARGS_MAGIC,
-        frame_buffer: FrameBufferDescriptor {
-            base: PhysAddr::new(FRAME_BUFFER_BASE),
-            len: FRAME_BUFFER_LEN,
-            resolution: RESOLUTION,
-        },
-        memory_map: MemoryMap {
-            iter: (&raw const MMAP_ITER).read().assume_init(),
-        },
-    };
-    kernel_entry(&args);
-}
-
-fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
+fn print_system_information(
+    system_table: &SystemTable<Boot>,
+) -> uefi::Result<FrameBufferDescriptor> {
     info!(
         "{} v{}",
         env!("CARGO_PKG_DESCRIPTION"),
@@ -172,11 +165,9 @@ fn print_system_information(system_table: &SystemTable<Boot>) -> uefi::Result {
 
     info!("Graphic buffer: {:p}, {:#x}", buf.as_mut_ptr(), buf.size());
 
-    unsafe {
-        FRAME_BUFFER_BASE = buf.as_mut_ptr() as u64;
-        FRAME_BUFFER_LEN = buf.size();
-        RESOLUTION = resolution;
-    }
-
-    Ok(())
+    Ok(FrameBufferDescriptor {
+        base: PhysAddr::new(buf.as_mut_ptr() as u64),
+        len: buf.size(),
+        resolution,
+    })
 }
