@@ -7,4 +7,4 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-usyscall = { path = "../xv7-usyscall", package = "xv7-usyscall" }
+abi = { path = "../xv7-abi", package = "xv7-abi" }

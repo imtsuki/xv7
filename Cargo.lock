@@ -488,6 +488,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "xv7-abi"
+version = "0.1.0"
+
+[[package]]
 name = "xv7-boot"
 version = "0.1.0"
 dependencies = [
@@ -524,8 +528,8 @@ dependencies = [
  "uart_16550",
  "vte",
  "x86_64",
+ "xv7-abi",
  "xv7-boot",
- "xv7-usyscall",
  "zeroize",
 ]
 
@@ -533,12 +537,8 @@ dependencies = [
 name = "xv7-user"
 version = "0.1.0"
 dependencies = [
- "xv7-usyscall",
+ "xv7-abi",
 ]
-
-[[package]]
-name = "xv7-usyscall"
-version = "0.1.0"
 
 [[package]]
 name = "zeroize"
