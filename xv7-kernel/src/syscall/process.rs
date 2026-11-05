@@ -10,7 +10,7 @@ use x86_64::structures::paging::{Mapper, Page};
 use x86_64::structures::paging::{OffsetPageTable, PageTableFlags};
 use zeroize::Zeroize;
 
-use usyscall::error::*;
+use abi::error::*;
 
 pub fn exit(code: isize) -> Result<usize> {
     let proc = process::my_proc();

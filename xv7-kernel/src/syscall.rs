@@ -4,8 +4,8 @@ pub mod process;
 use core::slice;
 use core::str;
 
-use usyscall::error::*;
-use usyscall::number::*;
+use abi::error::*;
+use abi::number::*;
 
 pub fn syscall(a: usize, b: usize, c: usize, d: usize, e: usize, f: usize) -> usize {
     fn inner(a: usize, b: usize, c: usize, d: usize, _e: usize, _f: usize) -> Result<usize> {

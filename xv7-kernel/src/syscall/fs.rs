@@ -3,7 +3,7 @@ use crate::fs::file::File;
 use crate::{fs::dev::Console, process::my_proc};
 use alloc::string::String;
 use alloc::sync::Arc;
-use usyscall::error::*;
+use abi::error::*;
 
 pub fn mknod(path: &str, dev: usize) -> Result<usize> {
     if dev == 1 {

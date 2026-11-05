@@ -1,7 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
-    "xv7-usyscall",
+    "xv7-abi",
     "xv7-user",
     "xv7-kernel",
     "xv7-boot",
