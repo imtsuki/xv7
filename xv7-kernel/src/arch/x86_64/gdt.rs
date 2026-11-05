@@ -1,11 +1,11 @@
 use core::cell::SyncUnsafeCell;
 use lazy_static::lazy_static;
-use x86_64::instructions::segmentation::{Segment, CS, DS, ES, GS, SS};
+use x86_64::PrivilegeLevel;
+use x86_64::VirtAddr;
+use x86_64::instructions::segmentation::{CS, DS, ES, GS, SS, Segment};
 use x86_64::instructions::tables::load_tss;
 use x86_64::structures::gdt::*;
 use x86_64::structures::tss::TaskStateSegment;
-use x86_64::PrivilegeLevel;
-use x86_64::VirtAddr;
 
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 pub const PAGE_FAULT_IST_INDEX: u16 = 1;

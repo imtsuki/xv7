@@ -12,15 +12,15 @@ pub fn init() {
         cpuid
             .get_vendor_info()
             .as_ref()
-            .map_or_else(|| "unknown", |vf| vf.as_string(),)
+            .map_or_else(|| "unknown", |vf| vf.as_str())
     );
 
     println!(
         "CPU Model: {}",
-        cpuid.get_extended_function_info().as_ref().map_or_else(
-            || "n/a",
-            |extfuninfo| extfuninfo.processor_brand_string().unwrap_or("unreadable"),
-        )
+        cpuid
+            .get_processor_brand_string()
+            .as_ref()
+            .map_or("n/a", |pbs| pbs.as_str())
     );
 
     cpuid.get_feature_info().as_ref().map_or_else(

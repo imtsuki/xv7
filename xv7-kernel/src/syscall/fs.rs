@@ -1,5 +1,5 @@
-use crate::fs::file::File;
 use crate::fs::FILE_SYSTEM;
+use crate::fs::file::File;
 use crate::{fs::dev::Console, process::my_proc};
 use alloc::string::String;
 use alloc::sync::Arc;

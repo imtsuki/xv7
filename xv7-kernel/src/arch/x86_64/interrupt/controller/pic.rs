@@ -4,20 +4,22 @@ pub unsafe fn disable_8259_pic() {
     let mut master = Pic::new(0x20);
     let mut slave = Pic::new(0xA0);
 
-    master.cmd.write(0x11);
-    slave.cmd.write(0x11);
+    unsafe {
+        master.cmd.write(0x11);
+        slave.cmd.write(0x11);
 
-    master.data.write(0x20);
-    slave.data.write(0x28);
+        master.data.write(0x20);
+        slave.data.write(0x28);
 
-    master.data.write(4);
-    slave.data.write(2);
+        master.data.write(4);
+        slave.data.write(2);
 
-    master.data.write(1);
-    slave.data.write(1);
+        master.data.write(1);
+        slave.data.write(1);
 
-    master.data.write(0xff);
-    slave.data.write(0xff);
+        master.data.write(0xff);
+        slave.data.write(0xff);
+    }
 
     master.ack();
     slave.ack();

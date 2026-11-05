@@ -3,22 +3,20 @@ use crate::io::read_file;
 use boot::KernelEntry;
 use goblin::elf;
 use goblin::elf::reloc::*;
-use uefi::prelude::*;
-use uefi::table::boot::{AllocateType, MemoryType};
+use uefi::boot::{AllocateType, MemoryType};
 use x86_64::structures::paging::FrameAllocator;
 use x86_64::structures::paging::{Mapper, Page, PageSize, PageTableFlags, PhysFrame, Size4KiB};
-use x86_64::{align_down, align_up, PhysAddr, VirtAddr};
+use x86_64::{PhysAddr, VirtAddr, align_down, align_up};
 use zeroize::Zeroize;
 
 /// Loads kernel image to `KERNEL_BASE`.
 /// Returns entry's virtual address.
 pub fn load_elf(
-    services: &BootServices,
     page_table: &mut impl Mapper<Size4KiB>,
     allocator: &mut impl FrameAllocator<Size4KiB>,
     path: &str,
 ) -> KernelEntry {
-    let (len, kernel_image) = read_file(services, path).expect("Could not load kernel image");
+    let (len, kernel_image) = read_file(path).expect("Could not load kernel image");
 
     dbg!(len);
 
@@ -42,9 +40,13 @@ pub fn load_elf(
             ) / Size4KiB::SIZE) as usize;
 
             info!("page_count: {}", page_count);
-            let phys_addr = services
-                .allocate_pages(AllocateType::AnyPages, MemoryType::LOADER_DATA, page_count)
-                .expect("Failed to allocate pages while loading kernel segment");
+            let phys_addr = uefi::boot::allocate_pages(
+                AllocateType::AnyPages,
+                MemoryType::LOADER_DATA,
+                page_count,
+            )
+            .expect("Failed to allocate pages while loading kernel segment")
+            .as_ptr() as u64;
 
             let dst = unsafe {
                 core::slice::from_raw_parts_mut(

@@ -1,8 +1,8 @@
 use super::gdt;
 use super::macros::SyscallStackFrame;
+use x86_64::VirtAddr;
 use x86_64::registers::model_specific::{Efer, EferFlags, KernelGsBase, LStar, SFMask, Star};
 use x86_64::registers::rflags::RFlags;
-use x86_64::VirtAddr;
 
 #[unsafe(naked)]
 pub unsafe extern "C" fn syscall_entry() {

@@ -4,7 +4,7 @@ use crate::fs::file::File;
 use crate::paging::{AddressSpace, VirtAddr};
 use crate::{
     config::*,
-    memory::{FrameAllocator, FRAME_ALLOCATOR},
+    memory::{FRAME_ALLOCATOR, FrameAllocator},
 };
 use alloc::vec::Vec;
 use core::sync::atomic::{AtomicUsize, Ordering};

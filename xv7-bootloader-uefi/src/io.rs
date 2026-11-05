@@ -1,13 +1,12 @@
 use alloc::vec::Vec;
 use core::convert::TryFrom;
-use uefi::prelude::*;
 use uefi::proto::media::file::*;
 use uefi::proto::media::fs::SimpleFileSystem;
 use uefi::{CString16, Result};
 
-pub fn read_file(services: &BootServices, path: &str) -> Result<(usize, Vec<u8>)> {
-    let handle = services.get_handle_for_protocol::<SimpleFileSystem>()?;
-    let mut fatfs = services.open_protocol_exclusive::<SimpleFileSystem>(handle)?;
+pub fn read_file(path: &str) -> Result<(usize, Vec<u8>)> {
+    let handle = uefi::boot::get_handle_for_protocol::<SimpleFileSystem>()?;
+    let mut fatfs = uefi::boot::open_protocol_exclusive::<SimpleFileSystem>(handle)?;
 
     let mut volume = fatfs.open_volume()?;
 
