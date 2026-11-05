@@ -123,3 +123,18 @@ pub fn init() {
         load_tss(GDT.1.tss_selector);
     }
 }
+
+pub unsafe fn push_kernel_stack(kstack_top: VirtAddr) {
+    unsafe {
+        let tss = &mut *TSS.get();
+        tss.privilege_stack_table[1] = tss.privilege_stack_table[0];
+        tss.privilege_stack_table[0] = kstack_top;
+    }
+}
+
+pub unsafe fn pop_kernel_stack() {
+    unsafe {
+        let tss = &mut *TSS.get();
+        tss.privilege_stack_table[0] = tss.privilege_stack_table[1];
+    }
+}

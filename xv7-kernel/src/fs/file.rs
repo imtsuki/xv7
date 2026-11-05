@@ -4,6 +4,7 @@ use alloc::sync::Arc;
 
 use super::vfs::Metadata;
 
+#[derive(Clone)]
 pub struct File {
     inode: Arc<dyn Inode>,
     offset: usize,
@@ -19,6 +20,26 @@ impl File {
             readable,
             writable,
         }
+    }
+
+    pub fn inode(&self) -> Arc<dyn Inode> {
+        self.inode.clone()
+    }
+
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+
+    pub fn is_readable(&self) -> bool {
+        self.readable
+    }
+
+    pub fn is_writable(&self) -> bool {
+        self.writable
+    }
+
+    pub fn advance_offset(&mut self, delta: usize) {
+        self.offset += delta;
     }
 
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize> {

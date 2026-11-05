@@ -1,16 +1,23 @@
-use crate::context::Context;
-use crate::cpu::my_cpu;
-use crate::fs::file::File;
-use crate::paging::{AddressSpace, VirtAddr};
-use crate::{
-    config::*,
-    memory::{FRAME_ALLOCATOR, FrameAllocator},
-};
 use alloc::vec::Vec;
 use core::sync::atomic::{AtomicUsize, Ordering};
-use x86_64::registers::rflags::RFlags;
-use x86_64::registers::segmentation::SegmentSelector;
-use x86_64::structures::idt::InterruptStackFrameValue;
+
+use goblin::elf;
+use goblin::elf::reloc::R_X86_64_RELATIVE;
+
+use crate::config::*;
+use crate::context::Context;
+use crate::fs::file::File;
+use crate::paging::{self, AddressSpace, VirtAddr};
+
+const KSTACK_SIZE: u64 = 4096;
+const USER_STACK_SIZE: usize = 4096;
+
+mod images {
+    #[cfg(debug_assertions)]
+    pub const INIT: &[u8] = include_bytes!("../../target/x86_64-unknown-none/debug/init");
+    #[cfg(not(debug_assertions))]
+    pub const INIT: &[u8] = include_bytes!("../../target/x86_64-unknown-none/release/init");
+}
 
 pub enum ProcessState {
     Spawn,
@@ -32,31 +39,16 @@ pub struct Process {
 
 impl Process {
     pub fn new() -> Process {
-        let kstack = {
-            let frame = FRAME_ALLOCATOR.lock().allocate_frame().unwrap();
-            VirtAddr::new(frame.start_address().as_u64() + PAGE_OFFSET_BASE)
-        };
-
-        let stack_pointer =
-            kstack + 4096u64 - core::mem::size_of::<InterruptStackFrameValue>() as u64 - 8u64;
-
-        let mut context = Context::user(stack_pointer);
-
+        let kstack = paging::alloc_kernel_page();
+        let kstack_top = kstack + KSTACK_SIZE;
         let vm = AddressSpace::new();
-
-        context.cr3 = vm.cr3.start_address().as_u64() as usize;
-
-        unsafe {
-            stack_pointer
-                .as_mut_ptr::<u64>()
-                .write(interrupt_return as *const u8 as u64);
-        };
+        let context = Context::init_user(kstack_top, vm.cr3_u64());
 
         Process {
             pid: NEXT_PID.fetch_add(1, Ordering::Relaxed),
-            context,
-            vm,
             state: ProcessState::Spawn,
+            vm,
+            context,
             kstack,
             fds: Vec::new(),
         }
@@ -64,37 +56,57 @@ impl Process {
 
     pub fn initcode() -> Process {
         let mut p = Process::new();
-        p.set_context_switch_return_address(VirtAddr::new(initcode as *const u8 as u64));
+        p.exec("/init");
         p
     }
 
-    pub fn intr_stack_frame(&mut self) -> &mut InterruptStackFrameValue {
-        unsafe {
-            &mut *((self.kstack.as_u64() + 4096
-                - core::mem::size_of::<InterruptStackFrameValue>() as u64)
-                as *mut InterruptStackFrameValue)
-        }
+    #[inline]
+    pub fn kstack_top(&self) -> VirtAddr {
+        self.kstack + KSTACK_SIZE
     }
 
-    fn set_context_switch_return_address(&mut self, addr: VirtAddr) {
-        let stack_pointer =
-            self.kstack + 4096u64 - core::mem::size_of::<InterruptStackFrameValue>() as u64 - 8u64;
-        unsafe {
-            stack_pointer.as_mut_ptr::<u64>().write(addr.as_u64());
+    pub fn exec(&mut self, path: &str) {
+        let image = match path {
+            "/init" => images::INIT,
+            _ => panic!("We have no filesystem yet; executables are hardcoded"),
         };
-    }
 
-    pub fn set_userspace_return_address(
-        &mut self,
-        instruction_pointer: VirtAddr,
-        stack_pointer: VirtAddr,
-    ) {
-        self.intr_stack_frame().instruction_pointer = instruction_pointer;
-        self.intr_stack_frame().stack_pointer = stack_pointer;
-        // FIXME: magic number
-        self.intr_stack_frame().code_segment = SegmentSelector(0x23);
-        self.intr_stack_frame().stack_segment = SegmentSelector(0x1b);
-        self.intr_stack_frame().cpu_flags = RFlags::from_bits_retain(0x282);
+        let image_elf = elf::Elf::parse(image).expect("Failed to parse ELF file");
+
+        for ph in image_elf.program_headers {
+            if ph.p_type == elf::program_header::PT_LOAD {
+                let vaddr = VirtAddr::new(ph.p_vaddr);
+                self.vm.map_user_range(
+                    vaddr,
+                    ph.p_memsz as usize,
+                    ph.is_write(),
+                    ph.is_executable(),
+                );
+                self.vm.copy_to_user(vaddr, &image[ph.file_range()]);
+            }
+        }
+
+        // Allocate and map user stack.
+        self.vm
+            .map_user_range(VirtAddr::new(USER_STACK), USER_STACK_SIZE, true, false);
+
+        // Relocate PIE executable.
+        for reloc in image_elf.dynrelas.iter() {
+            match reloc.r_type {
+                R_X86_64_RELATIVE => {
+                    let dst = VirtAddr::new(reloc.r_offset);
+                    let val = reloc.r_addend.unwrap() as u64;
+                    self.vm.write_user_u64(dst, val);
+                }
+                _ => unimplemented!("Unhandled reloc type!"),
+            }
+        }
+
+        Context::set_user_return_frame(
+            self.kstack_top(),
+            VirtAddr::new(image_elf.entry),
+            VirtAddr::new(USER_STACK + USER_STACK_SIZE as u64 - 16),
+        );
     }
 }
 
@@ -102,32 +114,4 @@ impl Clone for Process {
     fn clone(&self) -> Self {
         Process::new()
     }
-}
-
-#[unsafe(naked)]
-unsafe extern "C" fn interrupt_return() {
-    core::arch::naked_asm!("iretq")
-}
-
-#[unsafe(naked)]
-unsafe extern "C" fn initcode() {
-    extern "C" fn initcode_exec() {
-        crate::syscall::process::exec("/init");
-    }
-    core::arch::naked_asm!(
-        "call {}",
-        "iretq",
-        sym initcode_exec,
-    )
-}
-
-#[allow(dead_code)]
-#[unsafe(naked)]
-unsafe extern "C" fn fork_return() {
-    core::arch::naked_asm!("retq");
-}
-
-pub fn my_proc() -> &'static mut Process {
-    let cpu = my_cpu();
-    cpu.current_process.as_mut().unwrap()
 }
