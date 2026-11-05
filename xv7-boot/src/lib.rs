@@ -143,7 +143,27 @@ pub struct MemoryMapIter<'buf> {
 
 impl<'buf> MemoryMapIter<'buf> {
     /// Creates a new `MemoryMapIter` over the given raw descriptor buffer.
-    pub const fn new(buffer: &'buf [u8], entry_size: usize, len: usize) -> Self {
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that `buffer` is properly aligned for
+    /// [`MemoryDescriptor`], `entry_size` is at least
+    /// `size_of::<MemoryDescriptor>()` and a multiple of its alignment, and
+    /// `buffer` contains at least `len` valid descriptors at `entry_size`
+    /// byte intervals.
+    pub unsafe fn new(buffer: &'buf [u8], entry_size: usize, len: usize) -> Self {
+        assert!(entry_size >= core::mem::size_of::<MemoryDescriptor>());
+        assert_eq!(entry_size % core::mem::align_of::<MemoryDescriptor>(), 0);
+        assert_eq!(
+            buffer
+                .as_ptr()
+                .align_offset(core::mem::align_of::<MemoryDescriptor>()),
+            0
+        );
+        assert!(entry_size
+            .checked_mul(len)
+            .map_or(false, |total| total <= buffer.len()));
+
         Self {
             buffer,
             entry_size,

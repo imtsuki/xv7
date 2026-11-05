@@ -122,8 +122,12 @@ pub fn getpid() -> Result<usize> {
 }
 
 mod images {
+    #[cfg(debug_assertions)]
     pub const INIT: &'static [u8] =
         include_bytes!("../../../target/x86_64-unknown-none/debug/init");
+    #[cfg(not(debug_assertions))]
+    pub const INIT: &'static [u8] =
+        include_bytes!("../../../target/x86_64-unknown-none/release/init");
 }
 
 pub(crate) fn r#yield() -> Result<usize> {
