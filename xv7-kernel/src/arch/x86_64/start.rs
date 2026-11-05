@@ -18,15 +18,13 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     assert_eq!(args.magic, BOOT_ARGS_MAGIC);
 
     crate::video::init(args);
+    console::init();
 
     paging::disable_identity_mapping();
 
     paging::init_frame_allocator(args);
     // After this point, we can allocate memory
     crate::allocator::init_heap();
-
-    // We wanna see outputs
-    console::init();
 
     dbg!(args);
 
