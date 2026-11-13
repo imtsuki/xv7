@@ -146,10 +146,6 @@ impl AddressSpace {
         for i in 256..512 {
             table[i] = kernel_table[i].clone();
         }
-        table[511].set_frame(
-            table_frame,
-            PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE,
-        );
         AddressSpace { cr3: table_frame }
     }
 

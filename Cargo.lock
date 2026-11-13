@@ -508,7 +508,6 @@ dependencies = [
  "uefi",
  "x86_64",
  "xv7-boot",
- "zeroize",
 ]
 
 [[package]]
