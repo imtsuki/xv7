@@ -28,8 +28,10 @@ mod video;
 
 pub use crate::arch::context;
 pub use crate::arch::paging;
+pub use crate::arch::trapframe;
 
 pub fn kmain() -> ! {
     println!("We are alive!");
-    scheduler::scheduler();
+    scheduler::enqueue(process::Process::initcode());
+    scheduler::run();
 }

@@ -1,8 +1,8 @@
-use crate::{
-    config::*,
-    memory::{FRAME_ALLOCATOR, FrameAllocator},
-};
+use alloc::vec::Vec;
+use core::sync::atomic::{AtomicU64, Ordering};
+
 use boot::{BootArgs, MemoryType};
+use spin::{Mutex, Once};
 use x86_64::registers::control::Cr3;
 use x86_64::structures::paging::{
     Mapper, OffsetPageTable, Page, PageSize, PageTable, PageTableFlags, PhysFrame, Size4KiB,
@@ -11,14 +11,44 @@ use x86_64::structures::paging::{
 pub use x86_64::{PhysAddr, VirtAddr};
 use zeroize::Zeroize;
 
-pub fn disable_identity_mapping() {
-    let page_table = unsafe { active_page_table() };
+use crate::{
+    config::*,
+    memory::{FRAME_ALLOCATOR, FrameAllocator},
+};
 
+/// Kernel PML4 physical frame recorded during early boot.
+static KERNEL_CR3: Once<PhysFrame> = Once::new();
+
+/// Virtual address region for per-process kernel stacks (within PML4[416],
+/// sharing the same Level-3 PDPT initialized by `init_heap` at `KERNEL_HEAP_BASE`).
+const KSTACK_REGION_BASE: u64 = KERNEL_HEAP_BASE as u64 + 0x1000_0000;
+const KSTACK_GUARD_SIZE: u64 = Size4KiB::SIZE;
+pub const KSTACK_SIZE: u64 = 4 * Size4KiB::SIZE;
+const KSTACK_SLOT_STRIDE: u64 = KSTACK_GUARD_SIZE + KSTACK_SIZE;
+
+static NEXT_KSTACK_SLOT: AtomicU64 = AtomicU64::new(0);
+static FREE_KSTACK_TOPS: Mutex<Vec<VirtAddr>> = Mutex::new(Vec::new());
+
+pub fn disable_identity_mapping() {
+    let (kernel_frame, _) = Cr3::read();
+    KERNEL_CR3.call_once(|| kernel_frame);
+
+    let page_table = unsafe { active_page_table() };
     for i in 0..256 {
         page_table[i].set_unused();
     }
 
     x86_64::instructions::tlb::flush_all();
+}
+
+pub fn activate_kernel_page_table() {
+    let target = *KERNEL_CR3.get().expect("KERNEL_CR3 not initialized");
+    let (current, flags) = Cr3::read();
+    if current != target {
+        unsafe {
+            Cr3::write(target, flags);
+        }
+    }
 }
 
 pub fn init_frame_allocator(args: &BootArgs) {
@@ -33,24 +63,70 @@ pub fn init_frame_allocator(args: &BootArgs) {
     }
 }
 
-pub unsafe fn active_page_table() -> &'static mut PageTable {
-    let (level_4_table_frame, _) = Cr3::read();
-
-    let phys = level_4_table_frame.start_address();
-    let virt = PAGE_OFFSET_BASE + phys.as_u64();
-    let page_table_ptr: *mut PageTable = virt as *mut _;
-
-    unsafe { &mut *page_table_ptr }
+unsafe fn page_table_from_frame(frame: PhysFrame) -> &'static mut PageTable {
+    let virt = PAGE_OFFSET_BASE + frame.start_address().as_u64();
+    unsafe { &mut *(virt as *mut PageTable) }
 }
 
-/// Allocates a single 4 KiB physical frame and returns its kernel virtual address
-/// in the direct physical mapping (`PAGE_OFFSET_BASE + phys`).
-pub fn alloc_kernel_page() -> VirtAddr {
-    let frame = FRAME_ALLOCATOR
-        .lock()
-        .allocate_frame()
-        .expect("Failed to allocate kernel page");
-    VirtAddr::new(PAGE_OFFSET_BASE + frame.start_address().as_u64())
+pub unsafe fn active_page_table() -> &'static mut PageTable {
+    let (level_4_table_frame, _) = Cr3::read();
+    unsafe { page_table_from_frame(level_4_table_frame) }
+}
+
+/// A 16 KiB kernel stack preceded by an unmapped 4 KiB guard page.
+/// Recycled automatically on `Drop`.
+pub struct KernelStack {
+    top: VirtAddr,
+}
+
+impl KernelStack {
+    pub fn alloc() -> Self {
+        if let Some(top) = FREE_KSTACK_TOPS.lock().pop() {
+            return Self { top };
+        }
+
+        let slot = NEXT_KSTACK_SLOT.fetch_add(1, Ordering::Relaxed);
+        let slot_base = KSTACK_REGION_BASE + slot * KSTACK_SLOT_STRIDE;
+        let stack_bottom = slot_base + KSTACK_GUARD_SIZE;
+        let stack_top = stack_bottom + KSTACK_SIZE;
+
+        let kernel_frame = *KERNEL_CR3.get().expect("KERNEL_CR3 not initialized");
+        let page_table = unsafe { page_table_from_frame(kernel_frame) };
+        let mut mapper =
+            unsafe { OffsetPageTable::new(page_table, VirtAddr::new(PAGE_OFFSET_BASE)) };
+        let mut frame_allocator = FRAME_ALLOCATOR.lock();
+
+        let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE | PageTableFlags::NO_EXECUTE;
+        let mut addr = stack_bottom;
+        while addr < stack_top {
+            let page = Page::<Size4KiB>::containing_address(VirtAddr::new(addr));
+            let frame = frame_allocator
+                .allocate_frame()
+                .expect("Failed to allocate kernel stack frame");
+            unsafe {
+                mapper
+                    .map_to(page, frame, flags, &mut *frame_allocator)
+                    .expect("Failed to map kernel stack page")
+                    .flush();
+            }
+            addr += Size4KiB::SIZE;
+        }
+
+        Self {
+            top: VirtAddr::new(stack_top),
+        }
+    }
+
+    #[inline]
+    pub fn top(&self) -> VirtAddr {
+        self.top
+    }
+}
+
+impl Drop for KernelStack {
+    fn drop(&mut self) {
+        FREE_KSTACK_TOPS.lock().push(self.top);
+    }
 }
 
 pub struct AddressSpace {
@@ -60,15 +136,15 @@ pub struct AddressSpace {
 impl AddressSpace {
     pub fn new() -> AddressSpace {
         let table_frame = FRAME_ALLOCATOR.lock().allocate_frame().unwrap();
-        let table = unsafe {
-            &mut *((PAGE_OFFSET_BASE + table_frame.start_address().as_u64()) as *mut PageTable)
-        };
-        let current_table = unsafe { active_page_table() };
+        let table = unsafe { page_table_from_frame(table_frame) };
+        let kernel_frame = *KERNEL_CR3.get().expect("KERNEL_CR3 not initialized");
+        let kernel_table = unsafe { page_table_from_frame(kernel_frame) };
+
         for i in 0..256 {
             table[i].set_unused();
         }
         for i in 256..512 {
-            table[i] = current_table[i].clone();
+            table[i] = kernel_table[i].clone();
         }
         table[511].set_frame(
             table_frame,
@@ -77,17 +153,17 @@ impl AddressSpace {
         AddressSpace { cr3: table_frame }
     }
 
-    #[inline]
-    pub fn cr3_u64(&self) -> u64 {
-        self.cr3.start_address().as_u64()
+    pub fn activate(&self) {
+        let (current, flags) = Cr3::read();
+        if current != self.cr3 {
+            unsafe {
+                Cr3::write(self.cr3, flags);
+            }
+        }
     }
 
     pub unsafe fn page_table(&mut self) -> &'static mut PageTable {
-        let phys = self.cr3.start_address();
-        let virt = PAGE_OFFSET_BASE + phys.as_u64();
-        let page_table_ptr: *mut PageTable = virt as *mut _;
-
-        unsafe { &mut *page_table_ptr }
+        unsafe { page_table_from_frame(self.cr3) }
     }
 
     fn mapper(&mut self) -> OffsetPageTable<'static> {

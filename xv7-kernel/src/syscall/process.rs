@@ -1,24 +1,14 @@
 use abi::error::*;
 
-use crate::cpu::{self, with_current_process};
+use crate::cpu::with_current_process;
+use crate::scheduler;
 
 pub fn exit(code: isize) -> Result<usize> {
-    with_current_process(|proc| {
-        if proc.pid == 0 {
-            panic!("pid 0 exited with code {}", code);
-        }
-        Ok(0)
-    })
-}
-
-pub fn exec(path: &str) {
-    with_current_process(|proc| {
-        proc.exec(path);
-    });
+    scheduler::exit_current(code);
 }
 
 pub fn fork() -> Result<usize> {
-    with_current_process(|_proc| Ok(0))
+    Err(Error::new(ENOSYS))
 }
 
 pub fn getpid() -> Result<usize> {
@@ -26,6 +16,6 @@ pub fn getpid() -> Result<usize> {
 }
 
 pub(crate) fn r#yield() -> Result<usize> {
-    cpu::yield_current_process();
+    scheduler::yield_now();
     Ok(0)
 }

@@ -1,30 +1,35 @@
-use super::gdt;
-use super::macros::SyscallStackFrame;
+use core::mem::offset_of;
+
 use x86_64::VirtAddr;
-use x86_64::registers::model_specific::{Efer, EferFlags, KernelGsBase, LStar, SFMask, Star};
+use x86_64::registers::model_specific::{Efer, EferFlags, LStar, SFMask, Star};
 use x86_64::registers::rflags::RFlags;
+
+use super::gdt;
+use super::percpu::PerCpu;
+use super::trapframe::{TrapFrame, trap_return};
 
 #[unsafe(naked)]
 pub unsafe extern "C" fn syscall_entry() {
     core::arch::naked_asm!(
-        "swapgs",                     // Load kernel TSS pointer
-        "mov gs:[0x1c], rsp",         // Save userspace %rsp
-        "mov rsp, gs:[0x4]",          // Load TSS %rsp
-        "push 0x1b",                  // Push userspace data segment
-        "push gs:[0x1c]",             // Push userspace %rsp
-        "mov QWORD PTR gs:[0x1c], 0", // Clear userspace %rsp
-        "push r11",                   // Push rflags
-        "push 0x23",                  // Push userspace code segment
-        "push rcx",                   // Push userspace return pointer
-        "swapgs",                     // Restore %gs
-        // push preserved
+        "swapgs",
+        "mov QWORD PTR gs:[{u_rsp}], rsp",
+        "mov rsp, QWORD PTR gs:[{k_rsp}]",
+        // Build hardware `iretq` portion of `TrapFrame`
+        "push QWORD PTR gs:[{u_ss}]",
+        "push QWORD PTR gs:[{u_rsp}]",
+        "mov QWORD PTR gs:[{u_rsp}], 0",
+        "push r11",
+        "push QWORD PTR gs:[{u_cs}]",
+        "push rcx",
+        "swapgs",
+        // Save callee-saved registers
         "push rbx",
         "push rbp",
         "push r12",
         "push r13",
         "push r14",
         "push r15",
-        // push scratch
+        // Save scratch / syscall argument registers
         "push rax",
         "push r11",
         "push r10",
@@ -34,47 +39,31 @@ pub unsafe extern "C" fn syscall_entry() {
         "push rsi",
         "push rdx",
         "push rcx",
-        // call syscall_inner
+        // Invoke `syscall_inner(&mut TrapFrame)` (`rsp` is 16-byte aligned)
         "mov rdi, rsp",
-        "call {}",
-        // pop scratch
-        "pop rcx",
-        "pop rdx",
-        "pop rsi",
-        "pop rdi",
-        "pop r8",
-        "pop r9",
-        "pop r10",
-        "pop r11",
-        "pop rax",
-        // pop preserved
-        "pop r15",
-        "pop r14",
-        "pop r13",
-        "pop r12",
-        "pop rbp",
-        "pop rbx",
-        // interrupt return
-        "iretq",
-        sym syscall_inner,
+        "call {syscall_inner}",
+        "jmp {trap_return}",
+        k_rsp = const offset_of!(PerCpu, kernel_rsp),
+        u_rsp = const offset_of!(PerCpu, user_rsp_scratch),
+        u_cs = const offset_of!(PerCpu, user_cs),
+        u_ss = const offset_of!(PerCpu, user_ss),
+        syscall_inner = sym syscall_inner,
+        trap_return = sym trap_return,
     );
 }
 
-extern "C" fn syscall_inner(stack: *mut SyscallStackFrame) {
-    let stack = unsafe { &mut *stack };
-    let scratch = &stack.scratch;
-    stack.scratch.rax = crate::syscall::syscall(
-        scratch.rax,
-        scratch.rdi,
-        scratch.rsi,
-        scratch.rdx,
-        scratch.r10,
-        scratch.r8,
-    );
+extern "C" fn syscall_inner(tf: &mut TrapFrame) {
+    tf.rax = crate::syscall::syscall(
+        tf.rax as usize,
+        tf.rdi as usize,
+        tf.rsi as usize,
+        tf.rdx as usize,
+        tf.r10 as usize,
+        tf.r8 as usize,
+    ) as u64;
 }
 
 pub fn init() {
-    // Setup syscall/sysret cs/ss
     Star::write(
         gdt::GDT.1.user_code_selector,
         gdt::GDT.1.user_data_selector,
@@ -83,10 +72,8 @@ pub fn init() {
     )
     .unwrap();
 
-    // Setup syscall target rip
     LStar::write(VirtAddr::from_ptr(syscall_entry as *const u8));
 
-    // Setup flags to clear
     let mask = RFlags::TRAP_FLAG
         | RFlags::DIRECTION_FLAG
         | RFlags::INTERRUPT_FLAG
@@ -97,18 +84,7 @@ pub fn init() {
 
     SFMask::write(mask);
 
-    KernelGsBase::write(VirtAddr::from_ptr(gdt::TSS.get()));
-
-    // Enable syscall extensions
     unsafe {
         Efer::update(|efer| efer.insert(EferFlags::SYSTEM_CALL_EXTENSIONS));
     }
-
-    dbg!(unsafe { &*gdt::TSS.get() });
-
-    dbg!(Efer::read());
-    dbg!(Star::read());
-    dbg!(LStar::read());
-    dbg!(SFMask::read());
-    dbg!(KernelGsBase::read());
 }

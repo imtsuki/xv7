@@ -21,13 +21,13 @@ pub fn mknod(path: &str, dev: usize) -> Result<usize> {
 
 pub fn open(path: &str) -> Result<usize> {
     match FILE_SYSTEM.lock().get(path) {
-        None => dbg!(Err(Error::new(ENOENT))),
+        None => Err(Error::new(ENOENT)),
         Some(inode) => {
             let inode = inode.clone();
             let file = File::new(inode, true, true);
             with_current_process(|proc| {
                 proc.fds.push(file);
-                dbg!(Ok(proc.fds.len() - 1))
+                Ok(proc.fds.len() - 1)
             })
         }
     }
