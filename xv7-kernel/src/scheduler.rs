@@ -4,7 +4,6 @@ use spin::Mutex;
 
 use crate::arch;
 use crate::cpu;
-use crate::paging;
 use crate::process::{Process, ProcessState};
 
 static RUN_QUEUE: Mutex<VecDeque<Process>> = Mutex::new(VecDeque::new());
@@ -29,12 +28,7 @@ pub fn run() -> ! {
             continue;
         };
 
-        proc.vm.activate();
-        arch::set_kernel_stack(proc.kstack.top());
-
-        let proc = cpu::run_process(proc);
-
-        paging::activate_kernel_page_table();
+        let proc = cpu::resume(proc);
 
         match proc.state {
             ProcessState::Runnable => RUN_QUEUE.lock().push_back(proc),
@@ -51,14 +45,14 @@ pub fn run() -> ! {
 /// Cooperatively yields the CPU from the current process back to the scheduler.
 pub fn yield_now() {
     arch::without_interrupts(|| {
-        cpu::park_current_process(ProcessState::Runnable);
+        cpu::suspend_current(ProcessState::Runnable);
     });
 }
 
 /// Terminates the current process with `code` and switches back to the scheduler.
 pub fn exit_current(code: isize) -> ! {
     arch::without_interrupts(|| {
-        cpu::park_current_process(ProcessState::Zombie(code));
+        cpu::suspend_current(ProcessState::Zombie(code));
     });
     unreachable!("Zombie process resumed after exit")
 }
