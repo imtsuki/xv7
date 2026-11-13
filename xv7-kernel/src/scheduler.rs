@@ -3,7 +3,6 @@ use alloc::collections::VecDeque;
 use spin::Mutex;
 
 use crate::arch;
-use crate::context::Context;
 use crate::cpu;
 use crate::paging;
 use crate::process::{Process, ProcessState};
@@ -25,33 +24,26 @@ pub fn run() -> ! {
     arch::disable_interrupts();
 
     loop {
-        let next = RUN_QUEUE.lock().pop_front();
-        let Some(mut proc) = next else {
+        let Some(proc) = RUN_QUEUE.lock().pop_front() else {
             arch::wait_for_interrupt();
             continue;
         };
 
-        proc.state = ProcessState::Running;
         proc.vm.activate();
         arch::set_kernel_stack(proc.kstack.top());
 
-        let (sched_ctx, proc_ctx) = cpu::prepare_switch_to_process(proc);
-        unsafe {
-            Context::switch_from(sched_ctx).to(proc_ctx);
-        }
+        let proc = cpu::run_process(proc);
 
         paging::activate_kernel_page_table();
 
-        if let Some(proc) = cpu::take_current_process() {
-            match proc.state {
-                ProcessState::Runnable => RUN_QUEUE.lock().push_back(proc),
-                ProcessState::Zombie(code) => {
-                    if proc.pid == 0 {
-                        panic!("init (pid 0) exited with code {}", code);
-                    }
+        match proc.state {
+            ProcessState::Runnable => RUN_QUEUE.lock().push_back(proc),
+            ProcessState::Zombie(code) => {
+                if proc.pid == 0 {
+                    panic!("init (pid 0) exited with code {}", code);
                 }
-                ProcessState::Running => unreachable!("Process returned to scheduler while Running"),
             }
+            ProcessState::Running => unreachable!("Process returned to scheduler while Running"),
         }
     }
 }
@@ -59,20 +51,14 @@ pub fn run() -> ! {
 /// Cooperatively yields the CPU from the current process back to the scheduler.
 pub fn yield_now() {
     arch::without_interrupts(|| {
-        let (proc_ctx, sched_ctx) = cpu::prepare_switch_to_scheduler(ProcessState::Runnable);
-        unsafe {
-            Context::switch_from(proc_ctx).to(sched_ctx);
-        }
+        cpu::park_current_process(ProcessState::Runnable);
     });
 }
 
 /// Terminates the current process with `code` and switches back to the scheduler.
 pub fn exit_current(code: isize) -> ! {
     arch::without_interrupts(|| {
-        let (proc_ctx, sched_ctx) = cpu::prepare_switch_to_scheduler(ProcessState::Zombie(code));
-        unsafe {
-            Context::switch_from(proc_ctx).to(sched_ctx);
-        }
+        cpu::park_current_process(ProcessState::Zombie(code));
     });
     unreachable!("Zombie process resumed after exit")
 }
