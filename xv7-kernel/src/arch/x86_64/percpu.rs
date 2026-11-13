@@ -12,10 +12,6 @@ pub struct PerCpu {
     pub kernel_rsp: u64,
     /// Scratch slot used by `syscall_entry` to stash user `%rsp` while switching stacks.
     pub user_rsp_scratch: u64,
-    /// User Ring 3 code segment selector (with RPL=3).
-    pub user_cs: u64,
-    /// User Ring 3 data/stack segment selector (with RPL=3).
-    pub user_ss: u64,
 }
 
 impl PerCpu {
@@ -23,8 +19,6 @@ impl PerCpu {
         Self {
             kernel_rsp: 0,
             user_rsp_scratch: 0,
-            user_cs: 0,
-            user_ss: 0,
         }
     }
 }
@@ -33,10 +27,6 @@ impl PerCpu {
 static PER_CPU: SyncUnsafeCell<PerCpu> = SyncUnsafeCell::new(PerCpu::new());
 
 pub fn init() {
-    let per_cpu = unsafe { &mut *PER_CPU.get() };
-    per_cpu.user_cs = u64::from(gdt::GDT.1.user_code_selector.0);
-    per_cpu.user_ss = u64::from(gdt::GDT.1.user_data_selector.0);
-
     KernelGsBase::write(VirtAddr::from_ptr(PER_CPU.get()));
 }
 
