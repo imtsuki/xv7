@@ -6,8 +6,8 @@ use crate::paging::VirtAddr;
 /// Pure kernel-mode coroutine context (callee-saved registers + `%rsp`).
 ///
 /// Address space (`CR3`), privilege entry stack (`PerCpu` / `TSS.rsp0`), and
-/// interrupt masking (`IF == 0` across `switch`) are managed orthogonally by
-/// the scheduler and `TrapFrame`.
+/// interrupt masking (`IF == 0` across context switches) are managed orthogonally
+/// by the scheduler and `TrapFrame`.
 #[derive(Debug, Default)]
 #[repr(C)]
 pub struct Context {
@@ -18,6 +18,20 @@ pub struct Context {
     pub r12: usize,
     pub rbp: usize,
     pub rbx: usize,
+}
+
+#[must_use = "call `.to(target)` to complete the context switch"]
+pub struct SwitchFrom(*mut Context);
+
+impl SwitchFrom {
+    /// Saves the current CPU callee-saved registers + `%rsp` into `from` and
+    /// restores execution from `to`.
+    #[inline(always)]
+    pub unsafe fn to(self, to: *const Context) {
+        unsafe {
+            Context::switch_raw(self.0, to);
+        }
+    }
 }
 
 impl Context {
@@ -50,8 +64,14 @@ impl Context {
         }
     }
 
+    /// Begins a context switch saving the current execution state into `from`.
+    #[inline(always)]
+    pub fn switch_from(from: *mut Context) -> SwitchFrom {
+        SwitchFrom(from)
+    }
+
     #[unsafe(naked)]
-    pub unsafe extern "C" fn switch(from: *mut Context, to: *const Context) {
+    unsafe extern "C" fn switch_raw(from: *mut Context, to: *const Context) {
         core::arch::naked_asm!(
             "mov [rdi + {r15}], r15",
             "mov [rdi + {r14}], r14",
