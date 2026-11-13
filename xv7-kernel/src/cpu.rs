@@ -37,8 +37,8 @@ pub fn with_current_process<R>(f: impl FnOnce(&mut Process) -> R) -> R {
     f(proc)
 }
 
-/// Installs `proc` on the current CPU and returns raw `(scheduler_ctx, proc_ctx)` pointers
-/// after dropping all temporary `&mut` references (avoiding aliasing `&mut` across `switch_to`).
+/// Installs `proc` on the current CPU and returns raw `(from: scheduler_ctx, to: proc_ctx)` pointers
+/// after dropping all temporary `&mut` references (avoiding aliasing `&mut` across `Context::switch`).
 pub(crate) fn prepare_switch_to_process(proc: Process) -> (*mut Context, *const Context) {
     unsafe {
         let cpu = &mut *current_cpu_ptr();
@@ -47,7 +47,7 @@ pub(crate) fn prepare_switch_to_process(proc: Process) -> (*mut Context, *const 
     }
 }
 
-/// Updates the current process state to `next_state` and returns raw `(proc_ctx, scheduler_ctx)`
+/// Updates the current process state to `next_state` and returns raw `(from: proc_ctx, to: scheduler_ctx)`
 /// pointers after dropping all temporary `&mut` references.
 pub(crate) fn prepare_switch_to_scheduler(
     next_state: ProcessState,

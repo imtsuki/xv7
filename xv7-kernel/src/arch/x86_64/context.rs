@@ -6,7 +6,7 @@ use crate::paging::VirtAddr;
 /// Pure kernel-mode coroutine context (callee-saved registers + `%rsp`).
 ///
 /// Address space (`CR3`), privilege entry stack (`PerCpu` / `TSS.rsp0`), and
-/// interrupt masking (`IF == 0` across `switch_to`) are managed orthogonally by
+/// interrupt masking (`IF == 0` across `switch`) are managed orthogonally by
 /// the scheduler and `TrapFrame`.
 #[derive(Debug, Default)]
 #[repr(C)]
@@ -51,7 +51,7 @@ impl Context {
     }
 
     #[unsafe(naked)]
-    pub unsafe extern "C" fn switch_to(prev: *mut Context, next: *const Context) {
+    pub unsafe extern "C" fn switch(from: *mut Context, to: *const Context) {
         core::arch::naked_asm!(
             "mov [rdi + {r15}], r15",
             "mov [rdi + {r14}], r14",
