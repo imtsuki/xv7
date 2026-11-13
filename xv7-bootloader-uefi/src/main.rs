@@ -28,10 +28,7 @@ use uefi::mem::memory_map::MemoryMap as _;
 use uefi::proto::console::gop::GraphicsOutput;
 use uefi::table::cfg::ConfigTableEntry;
 use uefi::{Status, entry};
-use x86_64::{
-    PhysAddr, VirtAddr,
-    structures::paging::{PageSize, Size4KiB},
-};
+use x86_64::{PhysAddr, VirtAddr};
 
 use config::*;
 
@@ -47,49 +44,37 @@ fn efi_main() -> Status {
 
     uefi::boot::set_watchdog_timer(0, 0x10000, None).expect("Could not set watchdog timer");
 
-    // Initialize our "kernel" frame allocator which marks frames as `MEMORY_TYPE_KERNEL`.
-    let mut frame_allocator = paging::KernelFrameAllocator;
-
-    let mut page_table = paging::init_recursive(&mut frame_allocator);
-    // load kernel ELF image.
-    let kernel_entry = loader::load_elf(
-        &mut page_table,
-        &mut frame_allocator,
-        dbg!(KERNEL_IMAGE_PATH),
-    );
-
+    let mut page_table = paging::BootPageTable::new();
+    let kernel_entry = loader::load_elf(&mut page_table, dbg!(KERNEL_IMAGE_PATH));
     dbg!(kernel_entry);
 
     let mmap = uefi::boot::memory_map(MemoryType::LOADER_DATA).expect("Failed to get memory map");
-
+    let fb_end = frame_buffer
+        .base
+        .as_u64()
+        .saturating_add(frame_buffer.len as u64)
+        .saturating_sub(1);
     let max_addr = PhysAddr::new(
         mmap.entries()
-            .map(|m| m.phys_start + m.page_count * Size4KiB::SIZE - 1)
+            .filter(|m| m.ty != MemoryType::RESERVED)
+            .map(|m| m.phys_start + m.page_count * paging::PAGE_SIZE_4K - 1)
             .max()
-            .unwrap()
+            .unwrap_or(0)
+            .max(fb_end)
             .max(0xFFFF_FFFF),
     );
 
-    // Map complete pyhsical memory to `PAGE_OFFSET_BASE`.
-    paging::map_physical_memory(
-        VirtAddr::new(dbg!(PAGE_OFFSET_BASE)),
-        max_addr,
-        &mut page_table,
-        &mut frame_allocator,
-    );
+    // Map physical memory to `PAGE_OFFSET_BASE` and allocate initial kernel stack.
+    page_table.map_physical_memory(VirtAddr::new(dbg!(PAGE_OFFSET_BASE)), max_addr);
+    page_table.map_stack(VirtAddr::new(KERNEL_STACK_TOP), KERNEL_STACK_SIZE);
 
-    paging::map_stack(
-        VirtAddr::new(KERNEL_STACK_TOP),
-        KERNEL_STACK_SIZE,
-        &mut page_table,
-        &mut frame_allocator,
-    );
-
-    // Exit boot services and jump to the kernel.
+    // Exit boot services, switch to the newly constructed page table, and jump to the kernel.
     info!("Exiting UEFI boot services and jumping to the kernel");
     let mmap = unsafe { uefi::boot::exit_boot_services(Some(MemoryType::LOADER_DATA)) };
 
     unsafe {
+        page_table.activate();
+
         let raw_buf = mmap.buffer();
         let meta = mmap.meta();
         let mapped_buf = core::slice::from_raw_parts(

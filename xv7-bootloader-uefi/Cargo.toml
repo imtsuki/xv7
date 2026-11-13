@@ -11,8 +11,7 @@ edition = "2024"
 [dependencies]
 uefi = { version = "0.41.0", features = ["alloc", "global_allocator", "logger", "panic_handler"] }
 x86_64 = "0.15.5"
-zeroize = "1.8"
-goblin = { version = "0.10.7", default-features = false, features = ["elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive", "endian_fd"] }
+goblin = { version = "0.10.7", default-features = false, features = ["elf32", "elf64", "endian_fd"] }
 log = { version = "0.4", default-features = false }
 chrono = { version = "0.4.45", default-features = false }
 boot = { path = "../xv7-boot", package = "xv7-boot" }
