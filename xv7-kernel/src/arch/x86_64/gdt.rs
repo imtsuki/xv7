@@ -10,7 +10,7 @@ use x86_64::structures::tss::TaskStateSegment;
 pub const DOUBLE_FAULT_IST_INDEX: u16 = 0;
 pub const PAGE_FAULT_IST_INDEX: u16 = 1;
 
-pub static TSS: SyncUnsafeCell<TaskStateSegment> = SyncUnsafeCell::new(TaskStateSegment::new());
+static TSS: SyncUnsafeCell<TaskStateSegment> = SyncUnsafeCell::new(TaskStateSegment::new());
 
 lazy_static! {
     pub static ref GDT: (GlobalDescriptorTable, Selectors) = {
@@ -48,9 +48,8 @@ lazy_static! {
             Descriptor::UserSegment(flags.bits())
         };
 
-        // The order is required.
+        // Order required by `STAR` MSR (`sysret`).
         let kernel_code_selector = gdt.append(kernel_code);
-
         let kernel_data_selector = gdt.append(kernel_data);
 
         let mut user_data_selector = gdt.append(user_data);
@@ -61,14 +60,6 @@ lazy_static! {
 
         let tss = unsafe {
             let tss = &mut *TSS.get();
-            tss.privilege_stack_table[0] = {
-                const STACK_SIZE: usize = 4096;
-                static STACK: SyncUnsafeCell<[u8; STACK_SIZE]> =
-                    SyncUnsafeCell::new([0; STACK_SIZE]);
-
-                let stack_start = VirtAddr::from_ptr(STACK.get());
-                stack_start + STACK_SIZE as u64
-            };
             tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX as usize] = {
                 const STACK_SIZE: usize = 4096;
                 static STACK: SyncUnsafeCell<[u8; STACK_SIZE]> =
@@ -124,17 +115,9 @@ pub fn init() {
     }
 }
 
-pub unsafe fn push_kernel_stack(kstack_top: VirtAddr) {
+/// Updates `TSS.privilege_stack_table[0]` (`RSP0`) for hardware Ring 3 -> Ring 0 transitions.
+pub fn set_tss_rsp0(kstack_top: VirtAddr) {
     unsafe {
-        let tss = &mut *TSS.get();
-        tss.privilege_stack_table[1] = tss.privilege_stack_table[0];
-        tss.privilege_stack_table[0] = kstack_top;
-    }
-}
-
-pub unsafe fn pop_kernel_stack() {
-    unsafe {
-        let tss = &mut *TSS.get();
-        tss.privilege_stack_table[0] = tss.privilege_stack_table[1];
+        (*TSS.get()).privilege_stack_table[0] = kstack_top;
     }
 }

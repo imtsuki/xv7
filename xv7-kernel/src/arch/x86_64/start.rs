@@ -26,23 +26,19 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     // After this point, we can allocate memory
     crate::allocator::init_heap();
 
-    dbg!(args);
-
     memory::print_memory_map(&args.memory_map);
 
     cpuid::init();
 
     gdt::init();
 
+    percpu::init();
+
     interrupt::init();
 
     interrupt::controller::init();
 
     syscall::init();
-
-    interrupt::enable();
-
-    // crate::video::fun_things();
 
     crate::kmain();
 }

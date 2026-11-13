@@ -1,4 +1,5 @@
 use alloc::vec::Vec;
+use core::mem::size_of;
 use core::sync::atomic::{AtomicUsize, Ordering};
 
 use goblin::elf;
@@ -7,9 +8,9 @@ use goblin::elf::reloc::R_X86_64_RELATIVE;
 use crate::config::*;
 use crate::context::Context;
 use crate::fs::file::File;
-use crate::paging::{self, AddressSpace, VirtAddr};
+use crate::paging::{AddressSpace, KernelStack, VirtAddr};
+use crate::trapframe::TrapFrame;
 
-const KSTACK_SIZE: u64 = 4096;
 const USER_STACK_SIZE: usize = 4096;
 
 mod images {
@@ -19,11 +20,11 @@ mod images {
     pub const INIT: &[u8] = include_bytes!("../../target/x86_64-unknown-none/release/init");
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProcessState {
-    Spawn,
     Runnable,
     Running,
-    Zombie,
+    Zombie(isize),
 }
 
 static NEXT_PID: AtomicUsize = AtomicUsize::new(0);
@@ -33,20 +34,19 @@ pub struct Process {
     pub state: ProcessState,
     pub vm: AddressSpace,
     pub context: Context,
-    pub kstack: VirtAddr,
+    pub kstack: KernelStack,
     pub fds: Vec<File>,
 }
 
 impl Process {
-    pub fn new() -> Process {
-        let kstack = paging::alloc_kernel_page();
-        let kstack_top = kstack + KSTACK_SIZE;
+    pub fn new() -> Self {
+        let kstack = KernelStack::alloc();
         let vm = AddressSpace::new();
-        let context = Context::init_user(kstack_top, vm.cr3_u64());
+        let context = Context::init_user(kstack.top());
 
-        Process {
+        Self {
             pid: NEXT_PID.fetch_add(1, Ordering::Relaxed),
-            state: ProcessState::Spawn,
+            state: ProcessState::Runnable,
             vm,
             context,
             kstack,
@@ -54,15 +54,17 @@ impl Process {
         }
     }
 
-    pub fn initcode() -> Process {
-        let mut p = Process::new();
-        p.exec("/init");
-        p
+    pub fn initcode() -> Self {
+        let mut proc = Self::new();
+        proc.exec("/init");
+        proc
     }
 
+    /// Returns a mutable reference to the user `TrapFrame` stored at the top of `self.kstack`.
     #[inline]
-    pub fn kstack_top(&self) -> VirtAddr {
-        self.kstack + KSTACK_SIZE
+    pub fn trap_frame_mut(&mut self) -> &mut TrapFrame {
+        let tf_addr = self.kstack.top() - size_of::<TrapFrame>() as u64;
+        unsafe { &mut *tf_addr.as_mut_ptr::<TrapFrame>() }
     }
 
     pub fn exec(&mut self, path: &str) {
@@ -86,11 +88,9 @@ impl Process {
             }
         }
 
-        // Allocate and map user stack.
         self.vm
             .map_user_range(VirtAddr::new(USER_STACK), USER_STACK_SIZE, true, false);
 
-        // Relocate PIE executable.
         for reloc in image_elf.dynrelas.iter() {
             match reloc.r_type {
                 R_X86_64_RELATIVE => {
@@ -102,16 +102,8 @@ impl Process {
             }
         }
 
-        Context::set_user_return_frame(
-            self.kstack_top(),
-            VirtAddr::new(image_elf.entry),
-            VirtAddr::new(USER_STACK + USER_STACK_SIZE as u64 - 16),
-        );
-    }
-}
-
-impl Clone for Process {
-    fn clone(&self) -> Self {
-        Process::new()
+        let entry = VirtAddr::new(image_elf.entry);
+        let user_sp = VirtAddr::new(USER_STACK + USER_STACK_SIZE as u64 - 16);
+        self.trap_frame_mut().init_user(entry, user_sp);
     }
 }
