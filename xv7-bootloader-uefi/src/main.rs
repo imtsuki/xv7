@@ -28,6 +28,7 @@ use uefi::mem::memory_map::MemoryMap as _;
 use uefi::proto::console::gop::GraphicsOutput;
 use uefi::table::cfg::ConfigTableEntry;
 use uefi::{Status, entry};
+use x86_64::structures::paging::{PageSize, Size4KiB};
 use x86_64::{PhysAddr, VirtAddr};
 
 use config::*;
@@ -57,7 +58,7 @@ fn efi_main() -> Status {
     let max_addr = PhysAddr::new(
         mmap.entries()
             .filter(|m| m.ty != MemoryType::RESERVED)
-            .map(|m| m.phys_start + m.page_count * paging::PAGE_SIZE_4K - 1)
+            .map(|m| m.phys_start + m.page_count * Size4KiB::SIZE - 1)
             .max()
             .unwrap_or(0)
             .max(fb_end)

@@ -1,14 +1,13 @@
 use crate::config::*;
 use crate::io::read_file;
-use crate::paging::{BootPageTable, PAGE_SIZE_4K, alloc_zeroed_pages};
+use crate::paging::{BootPageTable, alloc_zeroed_pages};
 use boot::KernelEntry;
 use goblin::elf;
 use goblin::elf::reloc::*;
-use x86_64::structures::paging::PageTableFlags;
+use x86_64::structures::paging::{Page, PageSize, PageTableFlags, PhysFrame, Size4KiB};
 use x86_64::{VirtAddr, align_down, align_up};
 
 /// Loads kernel image to `KERNEL_BASE` and applies PIE relocations.
-/// Returns the kernel entry virtual address.
 pub fn load_elf(page_table: &mut BootPageTable, path: &str) -> KernelEntry {
     let (len, kernel_image) = read_file(path).expect("Could not load kernel image");
     dbg!(len);
@@ -28,16 +27,16 @@ pub fn load_elf(page_table: &mut BootPageTable, path: &str) -> KernelEntry {
             ph.vm_range(),
         );
 
-        let seg_page_offset = (ph.p_vaddr - align_down(ph.p_vaddr, PAGE_SIZE_4K)) as usize;
-        let total_bytes = seg_page_offset + ph.p_memsz as usize;
-        let page_count = (align_up(total_bytes as u64, PAGE_SIZE_4K) / PAGE_SIZE_4K) as usize;
+        let seg_offset = (ph.p_vaddr - align_down(ph.p_vaddr, Size4KiB::SIZE)) as usize;
+        let page_count = (align_up((seg_offset + ph.p_memsz as usize) as u64, Size4KiB::SIZE)
+            / Size4KiB::SIZE) as usize;
 
         info!("page_count: {}", page_count);
         let phys_base = alloc_zeroed_pages(page_count);
 
         let dst = unsafe {
             core::slice::from_raw_parts_mut(
-                (phys_base.as_u64() as *mut u8).add(seg_page_offset),
+                (phys_base.as_u64() as *mut u8).add(seg_offset),
                 ph.file_range().len(),
             )
         };
@@ -51,13 +50,11 @@ pub fn load_elf(page_table: &mut BootPageTable, path: &str) -> KernelEntry {
             flags |= PageTableFlags::NO_EXECUTE;
         }
 
-        let virt_base = VirtAddr::new(KERNEL_BASE + align_down(ph.p_vaddr, PAGE_SIZE_4K));
+        let virt_base = VirtAddr::new(KERNEL_BASE + align_down(ph.p_vaddr, Size4KiB::SIZE));
         for i in 0..page_count as u64 {
-            page_table.map_4k(
-                virt_base + i * PAGE_SIZE_4K,
-                phys_base + i * PAGE_SIZE_4K,
-                flags,
-            );
+            let page = Page::containing_address(virt_base + i * Size4KiB::SIZE);
+            let frame = PhysFrame::containing_address(phys_base + i * Size4KiB::SIZE);
+            page_table.map_4k(page, frame, flags);
         }
     }
 
@@ -65,9 +62,13 @@ pub fn load_elf(page_table: &mut BootPageTable, path: &str) -> KernelEntry {
     for reloc in kernel_elf.dynrelas.iter() {
         match reloc.r_type {
             R_X86_64_RELATIVE => {
-                let dst = VirtAddr::new(KERNEL_BASE + reloc.r_offset);
-                let val = KERNEL_BASE + reloc.r_addend.unwrap() as u64;
-                page_table.write_u64(dst, val);
+                let paddr = page_table
+                    .translate_addr(VirtAddr::new(KERNEL_BASE + reloc.r_offset))
+                    .expect("Kernel relocation target is not mapped");
+                unsafe {
+                    (paddr.as_u64() as *mut u64)
+                        .write_unaligned(KERNEL_BASE + reloc.r_addend.unwrap() as u64);
+                }
             }
             _ => unimplemented!("Unhandled reloc type!"),
         }
