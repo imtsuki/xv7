@@ -4,66 +4,69 @@ use crate::context::Context;
 use crate::process::{Process, ProcessState};
 
 pub struct Cpu {
-    scheduler_context: Context,
-    current_process: Option<Process>,
+    scheduler_context: SyncUnsafeCell<Context>,
+    current_process: SyncUnsafeCell<Option<Process>>,
 }
 
 impl Cpu {
     pub const fn new() -> Self {
         Self {
-            scheduler_context: Context::new(),
-            current_process: None,
+            scheduler_context: SyncUnsafeCell::new(Context::new()),
+            current_process: SyncUnsafeCell::new(None),
         }
     }
 }
 
 /// TODO: Index by CPU ID when SMP is enabled.
-static CPUS: SyncUnsafeCell<[Cpu; 1]> = SyncUnsafeCell::new([Cpu::new(); 1]);
+static CPUS: [Cpu; 1] = [const { Cpu::new() }; 1];
 
 #[inline]
-fn current_cpu_ptr() -> *mut Cpu {
-    unsafe { &raw mut (*CPUS.get())[0] }
+fn current_cpu() -> &'static Cpu {
+    &CPUS[0]
 }
 
 /// Executes `f` with a scoped mutable reference to the currently running `Process`.
 /// Do not call context-switching functions (`scheduler::yield_now` / `exit_current`) inside `f`.
 pub fn with_current_process<R>(f: impl FnOnce(&mut Process) -> R) -> R {
-    let proc = unsafe {
-        (*current_cpu_ptr())
-            .current_process
-            .as_mut()
-            .expect("No process running on current CPU")
-    };
+    let slot = unsafe { &mut *current_cpu().current_process.get() };
+    let proc = slot.as_mut().expect("No process running on current CPU");
     f(proc)
 }
 
-/// Installs `proc` on the current CPU and returns raw `(from: scheduler_ctx, to: proc_ctx)` pointers
-/// after dropping all temporary `&mut` references (avoiding aliasing `&mut` across `Context::switch_from`).
-pub(crate) fn prepare_switch_to_process(proc: Process) -> (*mut Context, *const Context) {
+/// Runs `proc` on the current CPU until it parks (`yield` / `exit`), then returns ownership of `proc`.
+pub(crate) fn run_process(mut proc: Process) -> Process {
+    let cpu = current_cpu();
+    proc.state = ProcessState::Running;
+
+    let proc_ctx = {
+        let slot = unsafe { &mut *cpu.current_process.get() };
+        let installed = slot.insert(proc);
+        &raw const installed.context
+    };
+
     unsafe {
-        let cpu = &mut *current_cpu_ptr();
-        let proc_ref = cpu.current_process.insert(proc);
-        (&raw mut cpu.scheduler_context, &raw const proc_ref.context)
+        Context::switch_from(cpu.scheduler_context.get()).to(proc_ctx);
     }
+
+    let slot = unsafe { &mut *cpu.current_process.get() };
+    slot.take()
+        .expect("Current process missing after returning to scheduler")
 }
 
-/// Updates the current process state to `next_state` and returns raw `(from: proc_ctx, to: scheduler_ctx)`
-/// pointers after dropping all temporary `&mut` references.
-pub(crate) fn prepare_switch_to_scheduler(
-    next_state: ProcessState,
-) -> (*mut Context, *const Context) {
-    unsafe {
-        let cpu = &mut *current_cpu_ptr();
-        let proc = cpu
-            .current_process
+/// Updates the running process's state to `next_state` and switches back to the CPU scheduler.
+pub(crate) fn park_current_process(next_state: ProcessState) {
+    let cpu = current_cpu();
+
+    let proc_ctx = {
+        let slot = unsafe { &mut *cpu.current_process.get() };
+        let proc = slot
             .as_mut()
-            .expect("No running process to switch from");
+            .expect("No running process on current CPU to park");
         proc.state = next_state;
-        (&raw mut proc.context, &raw const cpu.scheduler_context)
-    }
-}
+        &raw mut proc.context
+    };
 
-/// Takes ownership of the process that just yielded or exited on this CPU.
-pub(crate) fn take_current_process() -> Option<Process> {
-    unsafe { (*current_cpu_ptr()).current_process.take() }
+    unsafe {
+        Context::switch_from(proc_ctx).to(cpu.scheduler_context.get());
+    }
 }
