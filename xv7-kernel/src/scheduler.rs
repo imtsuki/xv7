@@ -37,7 +37,7 @@ pub fn run() -> ! {
 
         let (sched_ctx, proc_ctx) = cpu::prepare_switch_to_process(proc);
         unsafe {
-            Context::switch_to(sched_ctx, proc_ctx);
+            Context::switch(sched_ctx, proc_ctx);
         }
 
         paging::activate_kernel_page_table();
@@ -61,7 +61,7 @@ pub fn yield_now() {
     arch::without_interrupts(|| {
         let (proc_ctx, sched_ctx) = cpu::prepare_switch_to_scheduler(ProcessState::Runnable);
         unsafe {
-            Context::switch_to(proc_ctx, sched_ctx);
+            Context::switch(proc_ctx, sched_ctx);
         }
     });
 }
@@ -71,7 +71,7 @@ pub fn exit_current(code: isize) -> ! {
     arch::without_interrupts(|| {
         let (proc_ctx, sched_ctx) = cpu::prepare_switch_to_scheduler(ProcessState::Zombie(code));
         unsafe {
-            Context::switch_to(proc_ctx, sched_ctx);
+            Context::switch(proc_ctx, sched_ctx);
         }
     });
     unreachable!("Zombie process resumed after exit")
