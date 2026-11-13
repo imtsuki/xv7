@@ -1,4 +1,6 @@
+use alloc::boxed::Box;
 use core::cell::SyncUnsafeCell;
+use core::mem::size_of;
 
 use crate::arch;
 use crate::context::Context;
@@ -7,8 +9,12 @@ use crate::process::{Process, ProcessState};
 
 pub struct Cpu {
     scheduler_context: SyncUnsafeCell<Context>,
-    current_process: SyncUnsafeCell<Option<Process>>,
+    current_process: SyncUnsafeCell<Option<Box<Process>>>,
 }
+
+const _: () = {
+    assert!(size_of::<Option<Box<Process>>>() == size_of::<usize>());
+};
 
 impl Cpu {
     pub const fn new() -> Self {
@@ -31,13 +37,15 @@ fn current_cpu() -> &'static Cpu {
 /// Do not call context-switching functions (`scheduler::yield_now` / `exit_current`) inside `f`.
 pub fn with_current_process<R>(f: impl FnOnce(&mut Process) -> R) -> R {
     let slot = unsafe { &mut *current_cpu().current_process.get() };
-    let proc = slot.as_mut().expect("No process running on current CPU");
+    let proc = slot
+        .as_deref_mut()
+        .expect("No process running on current CPU");
     f(proc)
 }
 
 /// Resumes `proc` on the current CPU (activating its address space and kernel entry stack)
 /// until it suspends via `suspend_current`, then restores the kernel page table and returns `proc`.
-pub(crate) fn resume(mut proc: Process) -> Process {
+pub(crate) fn resume(mut proc: Box<Process>) -> Box<Process> {
     let cpu = current_cpu();
     proc.state = ProcessState::Running;
     proc.vm.activate();
@@ -67,7 +75,7 @@ pub(crate) fn suspend_current(next_state: ProcessState) {
     let proc_ctx = {
         let slot = unsafe { &mut *cpu.current_process.get() };
         let proc = slot
-            .as_mut()
+            .as_deref_mut()
             .expect("No running process on current CPU to suspend");
         proc.state = next_state;
         &raw mut proc.context

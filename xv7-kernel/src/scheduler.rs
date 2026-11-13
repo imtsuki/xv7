@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use alloc::collections::VecDeque;
 
 use spin::Mutex;
@@ -6,10 +7,10 @@ use crate::arch;
 use crate::cpu;
 use crate::process::{Process, ProcessState};
 
-static RUN_QUEUE: Mutex<VecDeque<Process>> = Mutex::new(VecDeque::new());
+static RUN_QUEUE: Mutex<VecDeque<Box<Process>>> = Mutex::new(VecDeque::new());
 
 /// Enqueues a runnable process at the tail of the global run queue.
-pub fn enqueue(mut proc: Process) {
+pub fn enqueue(mut proc: Box<Process>) {
     proc.state = ProcessState::Runnable;
     arch::without_interrupts(|| {
         RUN_QUEUE.lock().push_back(proc);
