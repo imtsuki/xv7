@@ -3,7 +3,6 @@ use core::mem::offset_of;
 use x86_64::VirtAddr;
 use x86_64::registers::model_specific::{Efer, EferFlags, LStar, SFMask, Star};
 use x86_64::registers::rflags::RFlags;
-use x86_64::structures::gdt::SegmentSelector;
 
 use super::gdt;
 use super::percpu::PerCpu;
@@ -46,8 +45,8 @@ pub unsafe extern "C" fn syscall_entry() {
         "jmp {trap_return}",
         k_rsp = const offset_of!(PerCpu, kernel_rsp),
         u_rsp = const offset_of!(PerCpu, user_rsp_scratch),
-        u_cs = const gdt::USER_CODE_SELECTOR as usize,
-        u_ss = const gdt::USER_DATA_SELECTOR as usize,
+        u_cs = const gdt::USER_CODE_SELECTOR.0 as usize,
+        u_ss = const gdt::USER_DATA_SELECTOR.0 as usize,
         syscall_inner = sym syscall_inner,
         trap_return = sym trap_return,
     );
@@ -66,10 +65,10 @@ extern "C" fn syscall_inner(tf: &mut TrapFrame) {
 
 pub fn init() {
     Star::write(
-        SegmentSelector(gdt::USER_CODE_SELECTOR),
-        SegmentSelector(gdt::USER_DATA_SELECTOR),
-        SegmentSelector(gdt::KERNEL_CODE_SELECTOR),
-        SegmentSelector(gdt::KERNEL_DATA_SELECTOR),
+        gdt::USER_CODE_SELECTOR,
+        gdt::USER_DATA_SELECTOR,
+        gdt::KERNEL_CODE_SELECTOR,
+        gdt::KERNEL_DATA_SELECTOR,
     )
     .unwrap();
 
