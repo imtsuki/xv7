@@ -1,3 +1,4 @@
+use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::mem::size_of;
 use core::sync::atomic::{AtomicUsize, Ordering};
@@ -39,22 +40,22 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn new() -> Self {
+    pub fn new() -> Box<Self> {
         let kstack = KernelStack::alloc();
         let vm = AddressSpace::new();
         let context = Context::init_user(kstack.top());
 
-        Self {
+        Box::new(Self {
             pid: NEXT_PID.fetch_add(1, Ordering::Relaxed),
             state: ProcessState::Runnable,
             vm,
             context,
             kstack,
             fds: Vec::new(),
-        }
+        })
     }
 
-    pub fn initcode() -> Self {
+    pub fn initcode() -> Box<Self> {
         let mut proc = Self::new();
         proc.exec("/init");
         proc
