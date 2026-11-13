@@ -1,6 +1,8 @@
 use core::cell::SyncUnsafeCell;
 
+use crate::arch;
 use crate::context::Context;
+use crate::paging;
 use crate::process::{Process, ProcessState};
 
 pub struct Cpu {
@@ -33,10 +35,13 @@ pub fn with_current_process<R>(f: impl FnOnce(&mut Process) -> R) -> R {
     f(proc)
 }
 
-/// Runs `proc` on the current CPU until it parks (`yield` / `exit`), then returns ownership of `proc`.
-pub(crate) fn run_process(mut proc: Process) -> Process {
+/// Resumes `proc` on the current CPU (activating its address space and kernel entry stack)
+/// until it suspends via `suspend_current`, then restores the kernel page table and returns `proc`.
+pub(crate) fn resume(mut proc: Process) -> Process {
     let cpu = current_cpu();
     proc.state = ProcessState::Running;
+    proc.vm.activate();
+    arch::set_kernel_stack(proc.kstack.top());
 
     let proc_ctx = {
         let slot = unsafe { &mut *cpu.current_process.get() };
@@ -48,20 +53,22 @@ pub(crate) fn run_process(mut proc: Process) -> Process {
         Context::switch_from(cpu.scheduler_context.get()).to(proc_ctx);
     }
 
+    paging::activate_kernel_page_table();
+
     let slot = unsafe { &mut *cpu.current_process.get() };
     slot.take()
         .expect("Current process missing after returning to scheduler")
 }
 
-/// Updates the running process's state to `next_state` and switches back to the CPU scheduler.
-pub(crate) fn park_current_process(next_state: ProcessState) {
+/// Marks the currently running process with `next_state` and suspends it back to the scheduler.
+pub(crate) fn suspend_current(next_state: ProcessState) {
     let cpu = current_cpu();
 
     let proc_ctx = {
         let slot = unsafe { &mut *cpu.current_process.get() };
         let proc = slot
             .as_mut()
-            .expect("No running process on current CPU to park");
+            .expect("No running process on current CPU to suspend");
         proc.state = next_state;
         &raw mut proc.context
     };
