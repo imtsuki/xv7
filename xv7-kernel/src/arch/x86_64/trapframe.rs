@@ -3,7 +3,7 @@ use core::mem::{offset_of, size_of};
 use x86_64::VirtAddr;
 use x86_64::registers::rflags::RFlags;
 
-use super::gdt::GDT;
+use super::gdt;
 
 const USER_RFLAGS: u64 = RFlags::INTERRUPT_FLAG.bits() | 0x2;
 
@@ -57,10 +57,10 @@ impl TrapFrame {
     pub fn init_user(&mut self, entry: VirtAddr, user_sp: VirtAddr) {
         *self = Self {
             rip: entry.as_u64(),
-            cs: u64::from(GDT.1.user_code_selector.0),
+            cs: u64::from(gdt::USER_CODE_SELECTOR),
             rflags: USER_RFLAGS,
             rsp: user_sp.as_u64(),
-            ss: u64::from(GDT.1.user_data_selector.0),
+            ss: u64::from(gdt::USER_DATA_SELECTOR),
             ..Self::default()
         };
     }
