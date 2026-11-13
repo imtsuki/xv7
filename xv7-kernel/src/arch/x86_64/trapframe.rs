@@ -57,10 +57,10 @@ impl TrapFrame {
     pub fn init_user(&mut self, entry: VirtAddr, user_sp: VirtAddr) {
         *self = Self {
             rip: entry.as_u64(),
-            cs: u64::from(gdt::USER_CODE_SELECTOR.0),
+            cs: u64::from(gdt::SELECTORS.user_code.0),
             rflags: USER_RFLAGS,
             rsp: user_sp.as_u64(),
-            ss: u64::from(gdt::USER_DATA_SELECTOR.0),
+            ss: u64::from(gdt::SELECTORS.user_data.0),
             ..Self::default()
         };
     }

@@ -45,8 +45,8 @@ pub unsafe extern "C" fn syscall_entry() {
         "jmp {trap_return}",
         k_rsp = const offset_of!(PerCpu, kernel_rsp),
         u_rsp = const offset_of!(PerCpu, user_rsp_scratch),
-        u_cs = const gdt::USER_CODE_SELECTOR.0 as usize,
-        u_ss = const gdt::USER_DATA_SELECTOR.0 as usize,
+        u_cs = const gdt::SELECTORS.user_code.0 as usize,
+        u_ss = const gdt::SELECTORS.user_data.0 as usize,
         syscall_inner = sym syscall_inner,
         trap_return = sym trap_return,
     );
@@ -65,10 +65,10 @@ extern "C" fn syscall_inner(tf: &mut TrapFrame) {
 
 pub fn init() {
     Star::write(
-        gdt::USER_CODE_SELECTOR,
-        gdt::USER_DATA_SELECTOR,
-        gdt::KERNEL_CODE_SELECTOR,
-        gdt::KERNEL_DATA_SELECTOR,
+        gdt::SELECTORS.user_code,
+        gdt::SELECTORS.user_data,
+        gdt::SELECTORS.kernel_code,
+        gdt::SELECTORS.kernel_data,
     )
     .unwrap();
 
