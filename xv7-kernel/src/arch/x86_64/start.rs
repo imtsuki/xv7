@@ -20,10 +20,9 @@ extern "sysv64" fn _start(args: &BootArgs) -> ! {
     crate::video::init(args);
     console::init();
 
-    paging::disable_identity_mapping();
-
-    paging::init_frame_allocator(args);
-    // After this point, we can allocate memory
+    memory::init(args);
+    paging::init();
+    // After this point, we can allocate heap memory
     crate::allocator::init_heap();
 
     memory::print_memory_map(&args.memory_map);

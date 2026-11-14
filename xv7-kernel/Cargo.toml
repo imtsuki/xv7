@@ -14,8 +14,8 @@ tinybmp = "0.7.0"
 vte = { version = "0.15.0", default-features = false }
 spin = "0.10.0"
 linked_list_allocator = "0.10"
-goblin = { version = "0.10.7", default-features = false, features = ["elf32", "elf64", "mach32", "mach64", "pe32", "pe64", "archive", "endian_fd"] }
-zeroize = "1.8"
+bitflags = { version = "2.13", default-features = false }
+goblin = { version = "0.10.7", default-features = false, features = ["elf32", "elf64", "endian_fd"] }
 boot = { path = "../xv7-boot", package = "xv7-boot" }
 abi = { path = "../xv7-abi", package = "xv7-abi" }
 
