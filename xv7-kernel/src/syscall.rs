@@ -1,41 +1,43 @@
 pub mod fs;
 pub mod process;
 
-use core::slice;
+use alloc::string::String;
 use core::str;
 
 use abi::error::*;
 use abi::number::*;
 
+use crate::cpu::with_current_process;
+
+const PATH_MAX: usize = 256;
+
 pub fn syscall(a: usize, b: usize, c: usize, d: usize, e: usize, f: usize) -> usize {
     fn inner(a: usize, b: usize, c: usize, d: usize, _e: usize, _f: usize) -> Result<usize> {
         match a {
             SYS_EXIT => process::exit(b as isize),
-            SYS_WRITE => fs::write(b, validate_slice(c as *const u8, d)?),
-            SYS_READ => fs::read(b, validate_slice_mut(c as *mut u8, d)?),
+            SYS_WRITE => fs::write(b, c, d),
+            SYS_READ => fs::read(b, c, d),
             SYS_FORK => process::fork(),
             SYS_GETPID => process::getpid(),
             SYS_YIELD => process::r#yield(),
-            SYS_MKNOD => fs::mknod(validate_str(b as *const u8, c)?, d),
-            SYS_OPEN => fs::open(validate_str(b as *const u8, c)?),
+            SYS_MKNOD => fs::mknod(&copy_user_path(b, c)?, d),
+            SYS_OPEN => fs::open(&copy_user_path(b, c)?),
             _ => Err(Error::new(ENOSYS)),
         }
     }
 
-    let result = inner(a, b, c, d, e, f);
-
-    Error::mux(result)
+    Error::mux(inner(a, b, c, d, e, f))
 }
 
-pub fn validate_slice<T>(ptr: *const T, len: usize) -> Result<&'static [T]> {
-    Ok(unsafe { slice::from_raw_parts(ptr, len) })
-}
-
-pub fn validate_slice_mut<T>(ptr: *mut T, len: usize) -> Result<&'static mut [T]> {
-    Ok(unsafe { slice::from_raw_parts_mut(ptr, len) })
-}
-
-pub fn validate_str(ptr: *const u8, len: usize) -> Result<&'static str> {
-    let slice = validate_slice(ptr, len)?;
-    str::from_utf8(slice).map_err(|_| Error::new(EINVAL))
+fn copy_user_path(user_ptr: usize, len: usize) -> Result<String> {
+    if len == 0 {
+        return Err(Error::new(ENOENT));
+    }
+    if len > PATH_MAX {
+        return Err(Error::new(ENAMETOOLONG));
+    }
+    let mut buf = [0u8; PATH_MAX];
+    with_current_process(|proc| proc.vm.copy_from_user(user_ptr, &mut buf[..len]))?;
+    let s = str::from_utf8(&buf[..len]).map_err(|_| Error::new(EINVAL))?;
+    Ok(String::from(s))
 }

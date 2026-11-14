@@ -2,10 +2,9 @@ use core::mem::size_of_val;
 
 use boot::PhysAddr;
 use spin::Mutex;
-pub use x86_64::structures::paging::{FrameAllocator, FrameDeallocator};
-use x86_64::structures::paging::{PageSize, PhysFrame, Size4KiB};
 
-use crate::config::*;
+use super::PAGE_SIZE;
+use crate::config::MAX_FRAMES_SUPPORTED;
 use crate::pretty::Pretty;
 
 const WORD_BITS: usize = u64::BITS as usize;
@@ -27,12 +26,12 @@ impl BitmapFrameAllocator {
         }
     }
 
-    pub fn install_memory_region(&mut self, phys_start: PhysAddr, page_count: usize) {
-        assert!(phys_start.is_aligned(Size4KiB::SIZE));
-        let start = (phys_start.as_u64() / Size4KiB::SIZE) as usize;
+    pub fn install_region(&mut self, phys_start: PhysAddr, page_count: usize) {
+        assert_eq!(phys_start.as_u64() % PAGE_SIZE as u64, 0);
+        let start = (phys_start.as_u64() as usize) / PAGE_SIZE;
         let end = start.saturating_add(page_count).min(MAX_FRAMES_SUPPORTED);
 
-        // Keep frame 0 reserved as a null-frame guard.
+        // Keep physical frame 0 reserved as a null-frame sentinel.
         let first = start.max(1);
         for frame in first..end {
             self.words[frame / WORD_BITS] |= 1u64 << (frame % WORD_BITS);
@@ -45,24 +44,7 @@ impl BitmapFrameAllocator {
         }
     }
 
-    #[allow(unused)]
-    pub fn print_statistics(&self) {
-        let free_frames: usize = self.words.iter().map(|w| w.count_ones() as usize).sum();
-        println!(
-            "BitmapFrameAllocator: bitmap occupies {}, maximum supported physical memory: {}",
-            size_of_val(&self.words).pretty(),
-            (MAX_FRAMES_SUPPORTED * Size4KiB::SIZE as usize).pretty(),
-        );
-        println!(
-            "BitmapFrameAllocator: {} frames available, which is {} of memory",
-            free_frames,
-            (free_frames * Size4KiB::SIZE as usize).pretty(),
-        );
-    }
-}
-
-unsafe impl FrameAllocator<Size4KiB> for BitmapFrameAllocator {
-    fn allocate_frame(&mut self) -> Option<PhysFrame<Size4KiB>> {
+    pub fn alloc(&mut self) -> Option<PhysAddr> {
         for offset in 0..BITMAP_WORDS {
             let word_idx = (self.next_word + offset) % BITMAP_WORDS;
             let word = self.words[word_idx];
@@ -70,28 +52,50 @@ unsafe impl FrameAllocator<Size4KiB> for BitmapFrameAllocator {
                 let bit = word.trailing_zeros() as usize;
                 self.words[word_idx] &= !(1u64 << bit);
                 self.next_word = word_idx;
-                let paddr = ((word_idx * WORD_BITS + bit) as u64) * Size4KiB::SIZE;
-                return Some(PhysFrame::containing_address(PhysAddr::new(paddr)));
+                let paddr = ((word_idx * WORD_BITS + bit) * PAGE_SIZE) as u64;
+                return Some(PhysAddr::new(paddr));
             }
         }
         None
     }
-}
 
-impl FrameDeallocator<Size4KiB> for BitmapFrameAllocator {
-    unsafe fn deallocate_frame(&mut self, frame: PhysFrame<Size4KiB>) {
-        let idx = (frame.start_address().as_u64() / Size4KiB::SIZE) as usize;
+    /// # Safety
+    /// `paddr` must be a page-aligned physical frame previously allocated from this allocator
+    /// and no longer referenced anywhere.
+    pub unsafe fn dealloc(&mut self, paddr: PhysAddr) {
+        debug_assert_eq!(paddr.as_u64() % PAGE_SIZE as u64, 0);
+        let idx = (paddr.as_u64() as usize) / PAGE_SIZE;
         assert!(idx > 0 && idx < MAX_FRAMES_SUPPORTED);
         let word_idx = idx / WORD_BITS;
         let mask = 1u64 << (idx % WORD_BITS);
         debug_assert_eq!(
             self.words[word_idx] & mask,
             0,
-            "double free of frame {idx:#x}"
+            "double free of physical frame {idx:#x}"
         );
         self.words[word_idx] |= mask;
         if word_idx < self.next_word {
             self.next_word = word_idx;
         }
+    }
+
+    #[allow(unused)]
+    pub fn free_frames(&self) -> usize {
+        self.words.iter().map(|w| w.count_ones() as usize).sum()
+    }
+
+    #[allow(unused)]
+    pub fn print_statistics(&self) {
+        let free_frames = self.free_frames();
+        println!(
+            "BitmapFrameAllocator: bitmap occupies {}, maximum supported physical memory: {}",
+            size_of_val(&self.words).pretty(),
+            (MAX_FRAMES_SUPPORTED * PAGE_SIZE).pretty(),
+        );
+        println!(
+            "BitmapFrameAllocator: {} frames available, which is {} of memory",
+            free_frames,
+            (free_frames * PAGE_SIZE).pretty(),
+        );
     }
 }
