@@ -11,7 +11,6 @@ edition = "2024"
 lazy_static = { version = "1.5.0", features = ["spin_no_std"] }
 embedded-graphics = "0.8.2"
 tinybmp = "0.7.0"
-bitvec = { version = "1.0.1", default-features = false, features = ["atomic"], optional = true }
 vte = { version = "0.15.0", default-features = false }
 spin = "0.10.0"
 linked_list_allocator = "0.10"
@@ -19,11 +18,6 @@ goblin = { version = "0.10.7", default-features = false, features = ["elf32", "e
 zeroize = "1.8"
 boot = { path = "../xv7-boot", package = "xv7-boot" }
 abi = { path = "../xv7-abi", package = "xv7-abi" }
-
-[features]
-default = ["frame-allocator-bitmap"]
-frame-allocator-bitmap = ["dep:bitvec"]
-frame-allocator-buddy = []
 
 [target.'cfg(target_arch = "x86_64")'.dependencies]
 x86_64 = "0.15.5"
